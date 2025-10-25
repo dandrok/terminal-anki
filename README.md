@@ -363,26 +363,6 @@ anki --help       # Show help message
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Commit** your changes: `git commit -m 'Add amazing feature'`
-4. **Push** to the branch: `git push origin feature/amazing-feature`
-5. **Open** a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript strict mode
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation when needed
-- Keep the code clean and modular
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -395,16 +375,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Anki** - For inspiration and algorithm refinement
 - **Vercel** - For the amazing @clack/prompts library
 - **Node.js Community** - For the fantastic CLI ecosystem
-
----
-
-## 📞 Support
-
-Have questions or suggestions?
-
-- 🐛 **Report bugs**: Open an issue on GitHub
-- 💡 **Feature requests**: Open an issue with the "enhancement" label
-- 📧 **General questions**: Use GitHub discussions
 
 ---
 
