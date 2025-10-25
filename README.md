@@ -52,6 +52,27 @@
 
 ---
 
+## 📋 Table of Contents
+
+- [🚀 Quick Start](#-quick-start)
+  - [Installation](#installation)
+  - [🎮 Using the CLI](#-using-the-cli)
+  - [CLI Options](#cli-options)
+- [📖 How It Works](#-how-it-works)
+  - [🧠 The Science Behind It](#-the-science-behind-it)
+  - [🎯 Session Control System](#-session-control-system)
+  - [📈 Smart Scheduling](#-smart-scheduling)
+- [🎮 User Interface](#-user-interface)
+  - [Main Menu Options](#main-menu-options)
+  - [Study Session Flow](#study-session-flow)
+  - [Card List Flow](#card-list-flow)
+- [💾 Data Management](#-data-management)
+- [🛠️ Development](#-development)
+- [🎨 Technologies Used](#-technologies-used)
+- [🔮 Future Roadmap](#-future-roadmap)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -67,26 +88,63 @@ npm install
 # Build the application
 npm run build
 
-# Make it globally available (optional)
+# Make executable and install globally
+chmod +x dist/index.js
 npm link
 ```
 
-### First Run
+## 🎮 Using the CLI
+
+### Global Commands (After npm link)
 
 ```bash
-# Start the interactive application
-npm start
-
-# Or run directly with anki command
+# Start interactive mode
 anki
+
+# Jump directly into studying due cards
+anki --study
+
+# Show help message
+anki --help
 ```
 
-The application automatically creates 5 sample flashcards to get you started!
+### Local Development Commands
+
+```bash
+# Start interactive mode (local)
+npm start
+
+# Run with TypeScript in development
+npm run dev
+
+# Build for production
+npm run build
+
+# Watch for changes during development
+npm run watch
+```
+
+### CLI Options
+
+| Command | Description |
+|---------|-------------|
+| `anki` | Start interactive mode with main menu |
+| `anki --study` | Jump directly into studying due cards |
+| `anki --help` | Show help message and available options |
+
+### First Run
+
+After installation, the application automatically creates 5 sample flashcards to get you started!
+
+**The `anki` command is now available from any directory in your terminal!** 🚀
 
 ### Quick Study Mode
 
 ```bash
 # Jump directly into studying due cards
+anki --study
+
+# Or use local development
 npm start -- --study
 ```
 
