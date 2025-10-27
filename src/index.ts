@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { FlashcardManager } from './flashcard';
-import { UIManager } from './ui';
-import { Flashcard, ReviewQuality, StudySessionRecord, CustomStudyFilters } from './types';
+import { FlashcardManager } from './flashcard.js';
+import { UIManager } from './ui.js';
+import { Flashcard, ReviewQuality, StudySessionRecord, CustomStudyFilters } from './types.js';
 import { isCancel } from '@clack/prompts';
 
 class TerminalAnki {
@@ -514,8 +514,6 @@ Core Features:
 }
 
 // Run the application
-if (require.main === module) {
-  main().catch(console.error);
-}
+main().catch(console.error);
 
 export { TerminalAnki };

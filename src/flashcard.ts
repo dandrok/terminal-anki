@@ -6,7 +6,13 @@ import {
   Achievement,
   ExtendedStats,
   CustomStudyFilters
-} from './types';
+} from './types.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class FlashcardManager {
   private cards: Flashcard[] = [];
@@ -18,7 +24,7 @@ export class FlashcardManager {
     studyDates: []
   };
   private achievements: Achievement[] = [];
-  private dataFile = require('path').join(__dirname, '..', 'flashcards.json');
+  private dataFile = path.join(__dirname, '..', 'flashcards.json');
 
   constructor() {
     this.initializeAchievements();
@@ -27,7 +33,6 @@ export class FlashcardManager {
 
   private loadData(): void {
     try {
-      const fs = require('fs');
       if (fs.existsSync(this.dataFile)) {
         const data = JSON.parse(fs.readFileSync(this.dataFile, 'utf-8'));
 
@@ -113,7 +118,6 @@ export class FlashcardManager {
 
   saveData(): void {
     try {
-      const fs = require('fs');
       const data = {
         cards: this.cards,
         sessionHistory: this.sessionHistory,

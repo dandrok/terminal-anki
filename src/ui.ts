@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { intro, outro, select, text, confirm, multiselect, isCancel } from '@clack/prompts';
-import { Flashcard, Achievement, ExtendedStats, CustomStudyFilters } from './types';
+import { Flashcard, Achievement, ExtendedStats, CustomStudyFilters } from './types.js';
 
 export class UIManager {
   showIntro(): void {
