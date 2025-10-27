@@ -2,7 +2,7 @@
 
 import { FlashcardManager } from './flashcard';
 import { UIManager } from './ui';
-import { Flashcard, ReviewQuality } from './types';
+import { Flashcard, ReviewQuality, StudySessionRecord, CustomStudyFilters } from './types';
 import { isCancel } from '@clack/prompts';
 
 class TerminalAnki {
@@ -18,13 +18,16 @@ class TerminalAnki {
     this.ui.showIntro();
 
     while (true) {
-      const stats = this.cardManager.getStats();
+      const stats = this.cardManager.getExtendedStats();
       const action = await this.ui.showMainMenu(stats);
 
       try {
         switch (action) {
           case 'study':
             await this.studyMode();
+            break;
+          case 'custom_study':
+            await this.customStudyMode();
             break;
           case 'add':
             await this.addCard();
@@ -37,6 +40,12 @@ class TerminalAnki {
             break;
           case 'delete':
             await this.deleteCard();
+            break;
+          case 'achievements':
+            await this.showAchievements();
+            break;
+          case 'analytics':
+            await this.showAnalytics();
             break;
           case 'stats':
             await this.showStatistics();
@@ -73,13 +82,13 @@ class TerminalAnki {
     const shuffled = [...dueCards].sort(() => Math.random() - 0.5);
     const sessionCards = shuffled.slice(0, sessionLength);
 
-    await this.runStudySession(sessionCards, dueCards.length);
+    await this.runStudySession(sessionCards, dueCards.length, 'due');
   }
 
   private async setupStudySession(totalDueCards: number): Promise<number | null> {
     const { select } = await import('@clack/prompts');
 
-    console.log(`\n📚 ${totalDueCards} cards due today\n`);
+    console.log(`\n◉ ${totalDueCards} cards due today\n`);
 
     const sessionType = await select({
       message: 'Study options:',
@@ -120,13 +129,13 @@ class TerminalAnki {
     }
 
     if (limitedOption === 'custom') {
-      const { text, select } = await import('@clack/prompts');
+      const { text } = await import('@clack/prompts');
 
       while (true) {
         const customNumber = await text({
           message: 'Enter number of cards:',
           placeholder: '1-100',
-          validate: (value) => {
+          validate: value => {
             const num = parseInt(value);
             if (isNaN(num) || num < 1 || num > 100) {
               return 'Please enter a number between 1 and 100';
@@ -146,18 +155,28 @@ class TerminalAnki {
     return limitedOption as number;
   }
 
-  private async runStudySession(sessionCards: Flashcard[], totalDueCards: number): Promise<void> {
+  private async runStudySession(
+    sessionCards: Flashcard[],
+    totalAvailableCards: number,
+    sessionType: 'due' | 'custom' | 'all',
+    customFilters?: CustomStudyFilters
+  ): Promise<void> {
+    const startTime = new Date();
+    let correctAnswers = 0;
     let studiedCount = 0;
     let quitEarly = false;
+    const totalDifficulty: number[] = [];
 
-    console.log(`\n📖 Starting study session with ${sessionCards.length} cards...`);
+    console.log(
+      `\n◐ Starting ${sessionType === 'custom' ? 'custom' : sessionType} study session with ${sessionCards.length} cards...`
+    );
     console.log('-'.repeat(50));
 
     for (let i = 0; i < sessionCards.length; i++) {
       const card = sessionCards[i];
 
       // Show question
-      console.log(`\n📝 Card ${i + 1}/${sessionCards.length}`);
+      console.log(`\n○ Card ${i + 1}/${sessionCards.length}`);
       console.log(`Question: ${card.front}`);
 
       // Wait for user to show answer or quit
@@ -180,14 +199,54 @@ class TerminalAnki {
       } else {
         this.cardManager.updateSpacedRepetition(card, rating);
         studiedCount++;
+        totalDifficulty.push(5 - rating); // Invert for difficulty calculation (0=hardest, 5=easiest)
+
+        if (rating >= 3) {
+          correctAnswers++;
+        }
       }
     }
 
+    // Record session data
+    const endTime = new Date();
+    const averageDifficulty =
+      totalDifficulty.length > 0
+        ? totalDifficulty.reduce((a, b) => a + b, 0) / totalDifficulty.length
+        : 0;
+
+    const sessionData: Omit<StudySessionRecord, 'id'> = {
+      startTime,
+      endTime,
+      cardsStudied: studiedCount,
+      correctAnswers,
+      incorrectAnswers: studiedCount - correctAnswers,
+      averageDifficulty,
+      sessionType,
+      customFilters: customFilters
+        ? {
+            tags: customFilters.tags,
+            difficulty: customFilters.difficulty
+          }
+        : undefined,
+      quitEarly
+    };
+
+    this.cardManager.recordStudySession(sessionData);
+
     // Show session summary
-    this.showSessionSummary(studiedCount, sessionCards.length - studiedCount, totalDueCards - studiedCount, quitEarly);
+    this.showSessionSummary(
+      studiedCount,
+      sessionCards.length - studiedCount,
+      totalAvailableCards - studiedCount,
+      quitEarly
+    );
   }
 
-  private async waitForAnswer(card: Flashcard, currentIndex: number, totalCards: number): Promise<'show' | 'quit' | 'skip'> {
+  private async waitForAnswer(
+    _card: Flashcard,
+    _currentIndex: number,
+    _totalCards: number
+  ): Promise<'show' | 'quit' | 'skip'> {
     const { select } = await import('@clack/prompts');
 
     console.log('\nChoose your action:');
@@ -208,7 +267,11 @@ class TerminalAnki {
     return action as 'show' | 'quit' | 'skip';
   }
 
-  private async getDifficultyRating(card: Flashcard, currentIndex: number, totalCards: number): Promise<ReviewQuality | 'quit'> {
+  private async getDifficultyRating(
+    _card: Flashcard,
+    _currentIndex: number,
+    _totalCards: number
+  ): Promise<ReviewQuality | 'quit'> {
     const { select } = await import('@clack/prompts');
 
     const difficulty = await select({
@@ -234,21 +297,26 @@ class TerminalAnki {
     return difficulty as ReviewQuality;
   }
 
-  private showSessionSummary(studiedCount: number, remainingInSession: number, totalRemainingDue: number, quitEarly: boolean): void {
+  private showSessionSummary(
+    studiedCount: number,
+    remainingInSession: number,
+    totalRemainingDue: number,
+    quitEarly: boolean
+  ): void {
     console.log('\n' + '='.repeat(50));
-    console.log('🎯 Session Summary');
+    console.log('◎ Session Summary');
     console.log('='.repeat(50));
-    console.log(`✅ Studied: ${studiedCount} cards`);
+    console.log(`✓ Studied: ${studiedCount} cards`);
     if (quitEarly) {
-      console.log(`📊 Skipped in session: ${remainingInSession} cards`);
+      console.log(`◰ Skipped in session: ${remainingInSession} cards`);
     }
-    console.log(`📚 Remaining due today: ${totalRemainingDue} cards`);
-    console.log('💾 Progress saved automatically');
+    console.log(`◉ Remaining due today: ${totalRemainingDue} cards`);
+    console.log('◈ Progress saved automatically');
 
     if (quitEarly) {
-      console.log('\n👋 See you next time!');
+      console.log('\n○ See you next time!');
     } else {
-      console.log('\n🎉 Great job! Keep up the good work!');
+      console.log('\n★ Great job! Keep up the good work!');
     }
     console.log('='.repeat(50));
   }
@@ -260,7 +328,7 @@ class TerminalAnki {
       return;
     }
 
-    this.cardManager.addCard(cardData.front, cardData.back);
+    this.cardManager.addCard(cardData.front, cardData.back, cardData.tags);
     this.ui.showSuccess('Flashcard added successfully!');
   }
 
@@ -273,7 +341,7 @@ class TerminalAnki {
       return;
     }
 
-    console.log(`\n📋 ${cards.length} cards available\n`);
+    console.log(`\n◷ ${cards.length} cards available\n`);
 
     const option = await select({
       message: 'How would you like to view your cards?',
@@ -290,9 +358,7 @@ class TerminalAnki {
       const { select } = await import('@clack/prompts');
       await select({
         message: '',
-        options: [
-          { value: 'back', label: '◀ Back to main menu' }
-        ]
+        options: [{ value: 'back', label: '◀ Back to main menu' }]
       });
     } else if (option === 'browse') {
       await this.ui.browseCards(cards);
@@ -309,7 +375,7 @@ class TerminalAnki {
     const { text } = await import('@clack/prompts');
 
     const query = await text({
-      message: '🔍 Search for:',
+      message: '◉ Search for:',
       placeholder: 'Enter search terms...'
     });
 
@@ -338,8 +404,57 @@ class TerminalAnki {
   }
 
   private async showStatistics(): Promise<void> {
-    const stats = this.cardManager.getStats();
-    await this.ui.showStats(stats);
+    const stats = this.cardManager.getExtendedStats();
+    await this.ui.showEnhancedStats(stats);
+  }
+
+  // v1.2.0 Custom Study Mode
+  private async customStudyMode(): Promise<void> {
+    const allTags = this.cardManager.getAllTags();
+    const filters = await this.ui.customStudySessionSetup(allTags);
+
+    if (!filters) {
+      return; // User cancelled
+    }
+
+    // Get filtered cards based on user selection
+    let filteredCards: Flashcard[];
+
+    if (filters.tags && filters.tags.length > 0) {
+      filteredCards = this.cardManager.getFilteredCards(filters);
+    } else if (filters.difficulty) {
+      filteredCards = this.cardManager.getCardsByDifficulty(filters.difficulty);
+    } else {
+      filteredCards = this.cardManager.getAllCards();
+    }
+
+    // Apply additional filters
+    if (filters.randomOrder) {
+      filteredCards.sort(() => Math.random() - 0.5);
+    }
+
+    if (filters.limit && filters.limit > 0 && filters.limit < filteredCards.length) {
+      filteredCards = filteredCards.slice(0, filters.limit);
+    }
+
+    if (filteredCards.length === 0) {
+      this.ui.showError('No cards match your filters!');
+      return;
+    }
+
+    await this.runStudySession(filteredCards, filteredCards.length, 'custom', filters);
+  }
+
+  // v1.2.0 Achievements display
+  private async showAchievements(): Promise<void> {
+    const stats = this.cardManager.getExtendedStats();
+    await this.ui.showAchievements(stats.achievements);
+  }
+
+  // v1.2.0 Analytics dashboard
+  private async showAnalytics(): Promise<void> {
+    const stats = this.cardManager.getExtendedStats();
+    await this.ui.showAnalytics(stats);
   }
 
   // Future backend integration methods
@@ -370,19 +485,27 @@ async function main() {
     await app.studyMode();
   } else if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-Terminal Anki - Flashcard Learning System
+Terminal Anki v1.2.0 - Enhanced Flashcard Learning System
 
 Usage:
-  ani                    Start interactive mode
+  anki                    Start interactive mode
   anki --study          Start directly in study mode
   anki --help           Show this help message
 
-Features:
-  🎯 Spaced repetition learning
-  📚 Flashcard management
-  📊 Learning statistics
-  🔍 Card search
-  💾 Local data storage
+New Features v1.2.0:
+  ◎ Custom study sessions (by tags, difficulty, limits)
+  ◈ Tag system for flashcards
+  ◈ Learning streaks tracking
+  ◑ Achievement system
+  ◰ Enhanced analytics dashboard
+  ◴ Study session history
+
+Core Features:
+  ◎ Spaced repetition learning (SM-2 algorithm)
+  ◉ Flashcard management with tags
+  ◰ Learning statistics & analytics
+  ◉ Card search and filtering
+  ◈ Local data storage with full history
     `);
   } else {
     // Interactive mode

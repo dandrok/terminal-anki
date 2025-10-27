@@ -1,6 +1,7 @@
 {
   "name": "terminal-anki",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "type": "module",
   "description": "Terminal-based Anki-like flashcard application with TypeScript",
   "main": "dist/index.js",
   "bin": {
@@ -11,7 +12,14 @@
     "dev": "ts-node src/index.ts",
     "build": "tsc",
     "watch": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "check": "npm run lint && npm run type-check && npm run format:check",
+    "prepare": "simple-git-hooks"
   },
   "keywords": [
     "anki",
@@ -25,14 +33,27 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
-    "prompts": "^2.4.2",
     "chalk": "^4.1.2",
-    "ora": "^5.4.1"
+    "ora": "^5.4.1",
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.38.0",
     "@types/node": "^20.10.0",
     "@types/prompts": "^2.4.9",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "simple-git-hooks": "^2.13.1",
+    "ts-node": "^10.9.1",
     "typescript": "^5.3.0",
-    "ts-node": "^10.9.1"
+    "typescript-eslint": "^8.46.2"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run check",
+    "pre-push": "npm run build"
   }
 }

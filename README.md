@@ -10,6 +10,8 @@
 
 **Learn efficiently with the proven SM-2 spaced repetition algorithm - the same algorithm used by Anki!**
 
+🎉 **Version 1.2.0 is here!** Major update with custom study sessions, achievements, learning streaks, and comprehensive analytics!
+
 </div>
 
 ---
@@ -21,7 +23,7 @@
 - **Adaptive Scheduling** - Cards appear less frequently as you master them
 - **Performance Tracking** - Algorithm learns from your answers
 
-### 🎮 **Professional Session Control** (NEW!)
+### 🎮 **Professional Session Control**
 - **Flexible Session Lengths** - Quick (10), Standard (25), Intensive (50), or Custom
 - **Intuitive Arrow Navigation** - Easy selection with arrow keys and Enter
 - **Smart Back Navigation** - Go back to previous menus at any step
@@ -30,19 +32,43 @@
 - **Session Summaries** - Track progress and see what's remaining
 - **Progress Saving** - Automatic saving at every step
 
-### 📚 **Complete Card Management**
+### 🎯 **Custom Study Sessions** (v1.2.0!)
+- **Tag-Based Filtering** - Study specific topics or categories
+- **Difficulty-Based Filtering** - Focus on new, learning, young, or mature cards
+- **Flexible Limits** - Set custom card counts per session
+- **Random Order Option** - Shuffle cards for varied practice
+- **Mixed Filtering** - Combine tags and difficulty filters
+
+### 📚 **Enhanced Card Management**
+- **Tag System** - Organize cards with multiple tags per card
 - **Add/Edit/Delete** cards with intuitive CLI interface
-- **Quick List View** - See all cards at a glance with status
+- **Quick List View** - See all cards at a glance with tags and status
 - **Interactive Card Browser** - Browse cards one by one with full content
 - **Search** through your flashcard collection
-- **Statistics** to track learning progress
+- **Tag Management** - Edit card tags with ease
 - **Local JSON Storage** ready for backend integration
+
+### 🔥 **Learning Streaks & Gamification** (v1.2.0!)
+- **Daily Streak Tracking** - Track consecutive study days
+- **Achievement System** - Unlock achievements for various milestones
+- **Progress Visualization** - See your learning journey over time
+- **Motivation Features** - Stay engaged with goals and rewards
+- **8 Different Achievements** - Cards, sessions, streaks, and mastery milestones
+
+### 📊 **Enhanced Analytics Dashboard** (v1.2.0!)
+- **Study Session History** - Complete record of all study sessions
+- **Weekly Progress Tracking** - See your learning patterns over weeks
+- **Tag Distribution Analysis** - Understand which topics you study most
+- **Performance Metrics** - Track accuracy, study time, and session data
+- **Learning Statistics** - Comprehensive view of your progress
+- **Session Analytics** - Detailed breakdown of study habits
 
 ### 🎨 **Modern Terminal Experience**
 - **Anki-Style UX** - Familiar difficulty rating system (0-4)
 - **Consistent @clack/prompts Interface** - Beautiful, modern design throughout
 - **Colorful Interface** - Clean, modern terminal design
 - **Keyboard-First** - Optimized for terminal power users
+- **Progress Bars** - Visual representation of achievement progress
 
 ### 🚀 **Developer-Friendly**
 - **TypeScript** with strict type safety
@@ -233,16 +259,19 @@ How well did you know this?
 
 ```bash
 🧠 TERMINAL ANKI - Flashcard Learning System
-📚 Total cards: 5 | ⏰ Due today: 3
+📚 Total cards: 5 | ⏰ Due today: 3 | 🔥 Streak: 2 days
 
 ? What would you like to do?
-❯ Study due cards    # Start learning session
-  Add new card        # Create new flashcard
-  List all cards      # View all flashcards
-  Search cards        # Find specific cards
-  Delete card         # Remove flashcards
-  Statistics          # View learning progress
-  Exit                # Quit application
+❯ Study due cards         # Start learning session
+  🎯 Custom study session  # Filtered study by tags/difficulty
+  Add new card            # Create new flashcard
+  List all cards          # View all flashcards
+  Search cards            # Find specific cards
+  Delete card             # Remove flashcards
+  🏆 Achievements         # View unlocked achievements
+  📊 Analytics & History  # Detailed progress dashboard
+  Statistics              # Quick stats overview
+  Exit                   # Quit application
 ```
 
 ### Study Session Flow
@@ -297,24 +326,61 @@ How would you like to view your cards?
 
 ## 💾 Data Management
 
-### Local Storage
+### Enhanced Local Storage (v1.2.0!)
 
-Your flashcards are stored in `flashcards.json`:
+Your data is stored in `flashcards.json` with comprehensive tracking:
 
 ```json
-[
-  {
-    "id": "1",
-    "front": "TypeScript",
-    "back": "A typed superset of JavaScript",
-    "easiness": 2.5,
-    "interval": 6,
-    "repetitions": 2,
-    "nextReview": "2025-10-31T15:44:47.610Z",
-    "lastReview": "2025-10-25T15:44:47.610Z",
-    "createdAt": "2025-10-25T15:44:47.610Z"
-  }
-]
+{
+  "cards": [
+    {
+      "id": "1",
+      "front": "TypeScript",
+      "back": "A typed superset of JavaScript",
+      "tags": ["programming", "typescript"],
+      "easiness": 2.5,
+      "interval": 6,
+      "repetitions": 2,
+      "nextReview": "2025-10-31T15:44:47.610Z",
+      "lastReview": "2025-10-25T15:44:47.610Z",
+      "createdAt": "2025-10-25T15:44:47.610Z"
+    }
+  ],
+  "sessionHistory": [
+    {
+      "id": "1698224547123",
+      "startTime": "2025-10-25T15:55:47.123Z",
+      "endTime": "2025-10-25T16:25:47.456Z",
+      "cardsStudied": 15,
+      "correctAnswers": 12,
+      "incorrectAnswers": 3,
+      "averageDifficulty": 1.8,
+      "sessionType": "due",
+      "quitEarly": false
+    }
+  ],
+  "learningStreak": {
+    "currentStreak": 3,
+    "longestStreak": 7,
+    "lastStudyDate": "2025-10-25T00:00:00.000Z",
+    "studyDates": ["2025-10-23", "2025-10-24", "2025-10-25"]
+  },
+  "achievements": [
+    {
+      "id": "first_session",
+      "name": "Study Beginner",
+      "description": "Complete your first study session",
+      "icon": "📚",
+      "category": "sessions",
+      "progress": {
+        "current": 1,
+        "required": 1,
+        "description": "sessions completed"
+      },
+      "unlockedAt": "2025-10-25T15:55:47.123Z"
+    }
+  ]
+}
 ```
 
 ### Ready for Backend Integration
@@ -368,6 +434,38 @@ npm run watch
 
 # Clean build artifacts
 npm run clean
+
+# Code Quality & Linting
+npm run lint          # Run ESLint
+npm run lint:fix       # Auto-fix linting issues
+npm run format         # Format code with Prettier
+npm run format:check   # Check code formatting
+npm run type-check     # TypeScript type checking
+npm run check          # Run all checks (lint + type-check + format)
+```
+
+### Code Quality & Git Hooks
+
+This project uses automated code quality checks with **pre-commit** and **pre-push** git hooks:
+
+```bash
+# Pre-commit hook (runs automatically before each commit)
+- ESLint linting with auto-fix
+- TypeScript type checking
+- Prettier code formatting verification
+
+# Pre-push hook (runs automatically before each push)
+- Full project build verification
+- Ensures no compilation errors
+```
+
+**Manual Testing:**
+```bash
+# Test what pre-commit checks
+npm run check
+
+# Test what pre-push checks
+npm run build
 ```
 
 ### CLI Options
@@ -389,6 +487,12 @@ anki --help       # Show help message
 - **chalk** - Terminal colors and styling
 - **ora** - Loading spinners and animations
 
+### Development Tools
+- **ESLint** - Code linting with TypeScript support
+- **Prettier** - Code formatting and style consistency
+- **simple-git-hooks** - Modern git hooks for pre-commit/pre-push automation
+- **typescript-eslint** - TypeScript-specific ESLint rules
+
 ### Algorithm
 - **SM-2 Spaced Repetition** - Proven learning algorithm since 1985
 - **Easiness Factor** - Personalized difficulty adjustment
@@ -398,26 +502,34 @@ anki --help       # Show help message
 
 ## 🔮 Future Roadmap
 
-### Version 1.2 (Short Term)
+### Version 1.2 ✅ **COMPLETED**
+- [x] Tag system for organizing flashcards by topics
+- [x] Custom study sessions (by tags, difficulty, limits)
+- [x] Learning streaks and achievements
+- [x] Study session history and analytics
+- [x] Enhanced analytics dashboard
+- [x] Progress tracking and gamification
+
+### Version 1.3 (Short Term)
 - [ ] Card import/export (CSV, JSON)
 - [ ] Bulk operations on cards
-- [ ] Custom study sessions (by topic, difficulty)
-- [ ] Learning streaks and achievements
-- [ ] Study session history and analytics
+- [ ] Card decks and categories
+- [ ] Review time statistics
+- [ ] Study reminders and notifications
 
-### Version 1.3 (Medium Term)
+### Version 1.4 (Medium Term)
 - [ ] Web interface for browser access
 - [ ] Basic REST API backend
 - [ ] Multi-device synchronization
-- [ ] Card decks and categories
-- [ ] Review time statistics
+- [ ] Media-rich cards (images, audio)
+- [ ] Advanced search and filtering
 
 ### Version 2.0 (Long Term)
 - [ ] Mobile companion app
-- [ ] Media-rich cards (images, audio)
-- [ ] Advanced analytics dashboard
-- [ ] Collaborative learning features
 - [ ] Cloud-based backup and sync
+- [ ] Collaborative learning features
+- [ ] Advanced analytics dashboard
+- [ ] AI-powered card suggestions
 
 ---
 
