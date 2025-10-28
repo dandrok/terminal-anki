@@ -1,5 +1,13 @@
 import { DIContainer } from './container.js';
 import { SERVICE_TOKENS } from './index.js';
+import {
+  IDataRepository,
+  IFlashcardService,
+  ISessionService,
+  ISpacedRepetitionService,
+  IAchievementService,
+  ILearningStreakService
+} from '../interfaces/services.js';
 import { DataRepository } from '../../features/flashcards/services/data-repository.js';
 import { FlashcardService } from '../../features/flashcards/services/flashcard-service-di.js';
 import { StatisticsService } from '../../features/flashcards/services/statistics-service-di.js';
@@ -34,7 +42,9 @@ export function configureServices(container: DIContainer): void {
       if (!dataRepositoryResult.success) {
         throw new Error(`Failed to resolve DataRepository: ${dataRepositoryResult.error.message}`);
       }
-      return new LearningStreakService(dataRepositoryResult.data);
+      return new LearningStreakService(
+        dataRepositoryResult.data as IDataRepository
+      );
     },
     [SERVICE_TOKENS.DATA_REPOSITORY]
   );
@@ -47,7 +57,9 @@ export function configureServices(container: DIContainer): void {
       if (!flashcardServiceResult.success) {
         throw new Error(`Failed to resolve FlashcardService: ${flashcardServiceResult.error.message}`);
       }
-      return new SessionService(flashcardServiceResult.data);
+      return new SessionService(
+        flashcardServiceResult.data as IFlashcardService
+      );
     },
     [SERVICE_TOKENS.FLASHCARD_SERVICE]
   );
@@ -68,7 +80,10 @@ export function configureServices(container: DIContainer): void {
         );
       }
 
-      return new StatisticsService(dataRepositoryResult.data, spacedRepetitionServiceResult.data);
+      return new StatisticsService(
+        dataRepositoryResult.data as IDataRepository,
+        spacedRepetitionServiceResult.data as ISpacedRepetitionService
+      );
     },
     [SERVICE_TOKENS.DATA_REPOSITORY, SERVICE_TOKENS.SPACED_REPETITION_SERVICE]
   );
@@ -87,7 +102,10 @@ export function configureServices(container: DIContainer): void {
         throw new Error(`Failed to resolve SessionService: ${sessionServiceResult.error.message}`);
       }
 
-      return new AchievementService(flashcardServiceResult.data, sessionServiceResult.data);
+      return new AchievementService(
+        flashcardServiceResult.data as IFlashcardService,
+        sessionServiceResult.data as ISessionService
+      );
     },
     [SERVICE_TOKENS.FLASHCARD_SERVICE, SERVICE_TOKENS.SESSION_SERVICE]
   );
@@ -138,11 +156,11 @@ export function configureServices(container: DIContainer): void {
       };
 
       return new FlashcardService(
-        dataRepositoryResult.data,
-        spacedRepetitionServiceResult.data,
-        achievementServiceResult.data,
-        learningStreakServiceResult.data,
-        sessionServiceResult.data,
+        dataRepositoryResult.data as IDataRepository,
+        spacedRepetitionServiceResult.data as ISpacedRepetitionService,
+        achievementServiceResult.data as IAchievementService,
+        learningStreakServiceResult.data as ILearningStreakService,
+        sessionServiceResult.data as ISessionService,
         initialState
       );
     },

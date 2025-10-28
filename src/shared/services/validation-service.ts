@@ -32,27 +32,14 @@ export class ValidationService implements IValidationService {
     data?: Flashcard;
     errors: string[];
   } {
-    try {
-      const result = FlashcardSchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
-      return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
-      };
+    const result = FlashcardSchema.safeParse(data);
+    if (result.success) {
+      return { isValid: true, data: result.data as Flashcard, errors: [] };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**
@@ -63,27 +50,18 @@ export class ValidationService implements IValidationService {
     data?: CustomStudyFilters;
     errors: string[];
   } {
-    try {
-      const result = CustomStudyFiltersSchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
+    const result = CustomStudyFiltersSchema.safeParse(data);
+    if (result.success) {
       return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
+        isValid: true,
+        data: result.data as CustomStudyFilters,
+        errors: []
       };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**
@@ -94,27 +72,14 @@ export class ValidationService implements IValidationService {
     data?: ReviewQuality;
     errors: string[];
   } {
-    try {
-      const result = ReviewQualitySchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
-      return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
-      };
+    const result = ReviewQualitySchema.safeParse(data);
+    if (result.success) {
+      return { isValid: true, data: result.data as ReviewQuality, errors: [] };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**
@@ -125,27 +90,18 @@ export class ValidationService implements IValidationService {
     data?: StudySessionRecord;
     errors: string[];
   } {
-    try {
-      const result = StudySessionRecordSchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
+    const result = StudySessionRecordSchema.safeParse(data);
+    if (result.success) {
       return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
+        isValid: true,
+        data: result.data as unknown as StudySessionRecord,
+        errors: []
       };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**
@@ -156,27 +112,18 @@ export class ValidationService implements IValidationService {
     data?: LearningStreak;
     errors: string[];
   } {
-    try {
-      const result = LearningStreakSchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
+    const result = LearningStreakSchema.safeParse(data);
+    if (result.success) {
       return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
+        isValid: true,
+        data: result.data as unknown as LearningStreak,
+        errors: []
       };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**
@@ -187,27 +134,14 @@ export class ValidationService implements IValidationService {
     data?: Achievement;
     errors: string[];
   } {
-    try {
-      const result = AchievementSchema.safeParse(data);
-
-      if (result.success) {
-        return {
-          isValid: true,
-          data: result.data,
-          errors: []
-        };
-      } else {
-        return {
-          isValid: false,
-          errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-        };
-      }
-    } catch (error) {
-      return {
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown validation error']
-      };
+    const result = AchievementSchema.safeParse(data);
+    if (result.success) {
+      return { isValid: true, data: result.data as Achievement, errors: [] };
     }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
   }
 
   /**

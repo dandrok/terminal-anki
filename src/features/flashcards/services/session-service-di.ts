@@ -20,22 +20,14 @@ export class SessionService implements ISessionService {
   /**
    * Create a new study session
    */
-  createSession(type: 'due' | 'custom' | 'new' | 'review'): {
-    id: string;
-    startTime: Date;
-    sessionType: string;
-    cardsStudied: number;
-    correctAnswers: number;
-    incorrectAnswers: number;
-    averageDifficulty: number;
-    duration: number;
-  } {
+  createSession(type: 'due' | 'custom' | 'new' | 'review'): StudySessionRecord {
     const sessionId = this.generateSessionId();
     const now = new Date();
 
     const session: StudySessionRecord = {
       id: sessionId,
       startTime: now,
+      endTime: null,
       sessionType: type,
       cardsStudied: 0,
       correctAnswers: 0,
@@ -48,16 +40,7 @@ export class SessionService implements ISessionService {
     this.sessions.set(sessionId, session);
     this.currentSession = session;
 
-    return {
-      id: sessionId,
-      startTime: now,
-      sessionType: type,
-      cardsStudied: 0,
-      correctAnswers: 0,
-      incorrectAnswers: 0,
-      averageDifficulty: 0,
-      duration: 0
-    };
+    return session;
   }
 
   /**
@@ -129,6 +112,10 @@ export class SessionService implements ISessionService {
    */
   getAllSessions(): StudySessionRecord[] {
     return Array.from(this.sessions.values());
+  }
+
+  getSessionHistory(): StudySessionRecord[] {
+    return this.getAllSessions().filter(session => session.endTime);
   }
 
   /**

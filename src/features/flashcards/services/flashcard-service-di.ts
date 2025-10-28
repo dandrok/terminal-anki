@@ -189,19 +189,19 @@ export class FlashcardService implements IFlashcardService {
   /**
    * Record a study session
    */
-  recordStudySession(sessionData: Omit<StudySessionRecord, 'id'>): StudySessionRecord {
-    const session = this.sessionService.createSession(sessionData.sessionType as any);
+  async recordStudySession(
+    sessionData: Omit<StudySessionRecord, 'id'>
+  ): Promise<StudySessionRecord> {
+    const session = this.sessionService.createSession(
+      sessionData.sessionType as any
+    );
 
     const completeSession: StudySessionRecord = {
+      ...sessionData,
       id: session.id,
       startTime: session.startTime,
-      cardsStudied: sessionData.cardsStudied,
-      correctAnswers: sessionData.correctAnswers,
-      incorrectAnswers: sessionData.incorrectAnswers || 0,
-      averageDifficulty: sessionData.averageDifficulty || 0,
-      sessionType: sessionData.sessionType || 'due',
-      quitEarly: sessionData.quitEarly,
-      duration: sessionData.duration
+      endTime: new Date(),
+      duration: (sessionData.endTime || new Date()).getTime() - session.startTime.getTime(),
     };
 
     this.state.sessionHistory.push(completeSession);

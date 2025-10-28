@@ -12,7 +12,7 @@ export interface StudySession {
 export interface StudySessionRecord {
   id: string;
   startTime: Date;
-  endTime?: Date;
+  endTime?: Date | null;
   cardsStudied: number;
   correctAnswers: number;
   incorrectAnswers: number;

@@ -98,7 +98,9 @@ export function createFlashcardService(
     }
   };
 
-  const checkAndUnlockAchievements = (sessionData?: StudySessionRecord): void => {
+  const checkAndUnlockAchievements = (
+    sessionData?: StudySessionRecord | null
+  ): void => {
     try {
       const stats = {
         total: state.cards.length,
@@ -115,10 +117,13 @@ export function createFlashcardService(
           card => spacedRepetitionService.getCardDifficulty(card) === 'mature'
         ).length
       };
-      const currentSession = sessionData || sessionService.getCurrentSession();
+      const currentSession = sessionData ?? sessionService.getCurrentSession();
 
       if (currentSession) {
-        const newAchievements = achievementService.checkAchievements(currentSession, stats);
+        const newAchievements = achievementService.checkAchievements(
+          currentSession,
+          stats
+        );
         for (const achievement of newAchievements) {
           achievementService.updateAchievement(achievement.id, achievement);
         }
@@ -326,20 +331,6 @@ export function createFlashcardService(
       }
 
       return stats;
-    }
-  };
-
-  // Additional methods for state management and testing
-  return {
-    ...service,
-
-    // Additional utility methods
-    async loadState(): Promise<void> {
-      await loadStateInternal();
-    },
-
-    async saveState(): Promise<void> {
-      await saveStateInternal();
     },
 
     getCardsByTag(tag: string): Flashcard[] {
@@ -354,7 +345,6 @@ export function createFlashcardService(
     },
 
     updateCardTags(cardId: string, tags: string[]): boolean {
-      // Validate inputs
       const idValidation = validationService.validateCardId(cardId);
       if (!idValidation.isValid) {
         throw new Error(`Invalid card ID: ${idValidation.errors.join(', ')}`);
@@ -373,7 +363,6 @@ export function createFlashcardService(
       return true;
     },
 
-    // Extended functionality
     getAllTags(): string[] {
       const allTags = new Set<string>();
       state.cards.forEach(card => {
@@ -382,26 +371,25 @@ export function createFlashcardService(
       return Array.from(allTags).sort();
     },
 
-    updateCardTags(cardId: string, tags: string[]): boolean {
-      // Validate inputs
-      const idValidation = validationService.validateCardId(cardId);
-      if (!idValidation.isValid) {
-        throw new Error(`Invalid card ID: ${idValidation.errors.join(', ')}`);
+    async recordStudySession(
+      sessionData: Omit<StudySessionRecord, 'id'>
+    ): Promise<StudySessionRecord> {
+      const newSession = sessionService.createSession(
+        sessionData.sessionType as 'due' | 'custom' | 'new' | 'review'
+      );
+      const sessionWithQuitEarly = { ...newSession, quitEarly: false };
+      state.sessionHistory.push(sessionWithQuitEarly);
+      state.learningStreak = await learningStreakService.updateStreak(new Date());
+      checkAndUnlockAchievements(sessionWithQuitEarly);
+      if (state.sessionHistory.length > 100) {
+        state.sessionHistory = state.sessionHistory.slice(-100);
       }
-
-      const tagsValidation = validationService.validateStringArray(tags, 20, 50);
-      if (!tagsValidation.isValid) {
-        throw new Error(`Invalid tags: ${tagsValidation.errors.join(', ')}`);
-      }
-
-      const card = state.cards.find(c => c.id === idValidation.data);
-      if (!card) return false;
-
-      card.tags = tagsValidation.data || [];
       saveStateInternal();
-      return true;
-    },
+      return sessionWithQuitEarly;
+    }
   };
+
+  return service;
 }
 
 /**

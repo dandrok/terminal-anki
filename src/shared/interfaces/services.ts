@@ -12,6 +12,7 @@ import {
   Achievement,
   ExtendedStats
 } from '../../features/flashcards/domain/index.js';
+export { ReviewQuality };
 import { Result } from '../utils/result-type.js';
 
 /**
@@ -120,7 +121,7 @@ export interface IAchievementService {
  * Learning streak service interface
  */
 export interface ILearningStreakService {
-  updateStreak(date: Date): Promise<void>;
+  updateStreak(date: Date): Promise<LearningStreak>;
   getCurrentStreak(): Promise<number>;
   getLongestStreak(): Promise<number>;
   getLastStudyDate(): Promise<Date | null>;
@@ -132,16 +133,7 @@ export interface ILearningStreakService {
  * Session service interface
  */
 export interface ISessionService {
-  createSession(type: 'due' | 'custom' | 'new' | 'review'): {
-    id: string;
-    startTime: Date;
-    sessionType: string;
-    cardsStudied: number;
-    correctAnswers: number;
-    incorrectAnswers: number;
-    averageDifficulty: number;
-    duration: number;
-  };
+  createSession(type: 'due' | 'custom' | 'new' | 'review'): StudySessionRecord;
   recordCardReview(sessionId: string, cardId: string, quality: ReviewQuality): void;
   endSession(
     sessionId: string,
@@ -184,7 +176,9 @@ export interface IFlashcardService {
   getCardsByTag(tag: string): Flashcard[];
   getCardsByDifficulty(difficulty: 'new' | 'learning' | 'young' | 'mature'): Flashcard[];
   updateCardTags(cardId: string, tags: string[]): boolean;
-  recordStudySession(sessionData: Omit<StudySessionRecord, 'id'>): StudySessionRecord;
+  recordStudySession(
+    sessionData: Omit<StudySessionRecord, 'id'>
+  ): Promise<StudySessionRecord>;
   loadState?(): Promise<void>;
   saveState?(): Promise<void>;
 }

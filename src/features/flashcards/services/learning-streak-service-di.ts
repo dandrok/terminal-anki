@@ -13,19 +13,27 @@ export class LearningStreakService implements ILearningStreakService {
   /**
    * Update learning streak based on study date
    */
-  async updateStreak(studyDate: Date): Promise<void> {
+  async updateStreak(studyDate: Date): Promise<LearningStreak> {
     try {
       const data = await this.dataRepository.loadData();
       const { learningStreak } = data;
-      const updatedStreak = this.calculateUpdatedStreak(learningStreak, studyDate);
+      const updatedStreak = this.calculateUpdatedStreak(
+        learningStreak,
+        studyDate
+      );
 
       // Save updated streak
       await this.dataRepository.saveData({
         ...data,
         learningStreak: updatedStreak
       });
+
+      return updatedStreak;
     } catch (error) {
       console.error('Failed to update learning streak:', error);
+      // Return the most recent streak or a default value
+      const data = await this.dataRepository.loadData().catch(() => null);
+      return data ? data.learningStreak : this.getDefaultStreak();
     }
   }
 
@@ -174,7 +182,7 @@ export class LearningStreakService implements ILearningStreakService {
 
       visualization.push({
         date: dateStr,
-        studied: studyDates.includes(dateStr),
+        studied: studyDates.map(d => d.toISOString().split('T')[0]).includes(dateStr),
         isToday: dateStr === today
       });
     }
