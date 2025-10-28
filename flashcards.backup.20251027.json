@@ -1,0 +1,11 @@
+{
+  "cards": [],
+  "sessionHistory": [],
+  "learningStreak": {
+    "currentStreak": 0,
+    "longestStreak": 0,
+    "lastStudyDate": null,
+    "studyDates": []
+  },
+  "achievements": []
+}

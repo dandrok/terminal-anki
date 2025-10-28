@@ -9,16 +9,20 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "tsx src/index.ts",
     "build": "tsc",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "check": "npm run lint && npm run type-check && npm run format:check",
+    "check": "npm run lint && npm run type-check && npm run format:check && npm run test:run",
     "prepare": "simple-git-hooks"
   },
   "keywords": [
@@ -39,6 +43,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.10.0",
     "@types/prompts": "^2.4.9",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
@@ -49,8 +54,11 @@
     "prettier": "^3.6.2",
     "simple-git-hooks": "^2.13.1",
     "ts-node": "^10.9.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.3.0",
-    "typescript-eslint": "^8.46.2"
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^4.0.4",
+    "zod": "^4.1.12"
   },
   "simple-git-hooks": {
     "pre-commit": "npm run check",
