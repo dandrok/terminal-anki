@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DIContainer } from './container.js';
 import { SERVICE_TOKENS } from './index.js';
-import { configureServices, createConfiguredContainer, validateServiceConfiguration } from './service-configuration.js';
+import {
+  configureServices,
+  createConfiguredContainer,
+  validateServiceConfiguration
+} from './service-configuration.js';
 import { serviceFactory, initializeServices } from './service-factory.js';
 
 // Mock the data repository to avoid file system operations in tests
 vi.mock('../../features/flashcards/services/data-repository.js', () => ({
-  DataRepository: vi.fn().mockImplementation(() => ({
-    name: 'DataRepository',
-    version: '1.0.0',
-    loadData: vi.fn().mockResolvedValue({
+  DataRepository: class {
+    name = 'DataRepository';
+    version = '1.0.0';
+    loadData = vi.fn().mockResolvedValue({
       success: true,
       data: {
         cards: [],
@@ -18,13 +22,13 @@ vi.mock('../../features/flashcards/services/data-repository.js', () => ({
           currentStreak: 0,
           longestStreak: 0,
           lastStudyDate: null,
-          studyDates: [],
+          studyDates: []
         },
-        achievements: [],
-      },
-    }),
-    saveData: vi.fn().mockResolvedValue({ success: true }),
-  })),
+        achievements: []
+      }
+    });
+    saveData = vi.fn().mockResolvedValue({ success: true });
+  }
 }));
 
 describe('Dependency Injection System', () => {
@@ -84,15 +88,25 @@ describe('Dependency Injection System', () => {
     });
 
     it('should detect circular dependencies', () => {
-      container.register('service-a', () => {
-        const result = container.resolve('service-b');
-        return result.success ? result.data : null;
-      }, { dependencies: ['service-b'] });
+      container.register(
+        'service-a',
+        () => {
+          const result = container.resolve('service-b');
+          if (!result.success) throw result.error;
+          return result.data;
+        },
+        { dependencies: ['service-b'] }
+      );
 
-      container.register('service-b', () => {
-        const result = container.resolve('service-a');
-        return result.success ? result.data : null;
-      }, { dependencies: ['service-a'] });
+      container.register(
+        'service-b',
+        () => {
+          const result = container.resolve('service-a');
+          if (!result.success) throw result.error;
+          return result.data;
+        },
+        { dependencies: ['service-a'] }
+      );
 
       const result = container.resolve('service-a');
       expect(result.success).toBe(false);

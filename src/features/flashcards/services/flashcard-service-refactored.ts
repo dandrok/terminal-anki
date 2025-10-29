@@ -15,7 +15,6 @@ import {
   ISessionService,
   IValidationService
 } from '../../../shared/interfaces/services.js';
-import { Result, Ok, Err } from '../../../shared/utils/result-type.js';
 import { filterCards } from '../filtering';
 import { CommonValidators } from '../../../shared/utils/validation-middleware.js';
 
@@ -83,24 +82,7 @@ export function createFlashcardService(
     }
   };
 
-  const loadStateInternal = async (): Promise<void> => {
-    try {
-      const data = await dataRepository.loadData();
-      state = {
-        cards: data.cards,
-        sessionHistory: data.sessionHistory,
-        learningStreak: data.learningStreak,
-        achievements: data.achievements
-      };
-    } catch (error) {
-      console.error('Failed to load flashcard state:', error);
-      throw error;
-    }
-  };
-
-  const checkAndUnlockAchievements = (
-    sessionData?: StudySessionRecord | null
-  ): void => {
+  const checkAndUnlockAchievements = (sessionData?: StudySessionRecord | null): void => {
     try {
       const stats = {
         total: state.cards.length,
@@ -120,10 +102,7 @@ export function createFlashcardService(
       const currentSession = sessionData ?? sessionService.getCurrentSession();
 
       if (currentSession) {
-        const newAchievements = achievementService.checkAchievements(
-          currentSession,
-          stats
-        );
+        const newAchievements = achievementService.checkAchievements(currentSession, stats);
         for (const achievement of newAchievements) {
           achievementService.updateAchievement(achievement.id, achievement);
         }
@@ -374,10 +353,15 @@ export function createFlashcardService(
     async recordStudySession(
       sessionData: Omit<StudySessionRecord, 'id'>
     ): Promise<StudySessionRecord> {
+      const validation = validationService.validateSessionData(sessionData);
+      if (!validation.isValid) {
+        throw new Error(`Invalid session data: ${validation.errors.join(', ')}`);
+      }
+
       const newSession = sessionService.createSession(
         sessionData.sessionType as 'due' | 'custom' | 'new' | 'review'
       );
-      const sessionWithQuitEarly = { ...newSession, quitEarly: false };
+      const sessionWithQuitEarly = { ...newSession, ...sessionData, quitEarly: false };
       state.sessionHistory.push(sessionWithQuitEarly);
       state.learningStreak = await learningStreakService.updateStreak(new Date());
       checkAndUnlockAchievements(sessionWithQuitEarly);
@@ -389,7 +373,38 @@ export function createFlashcardService(
     }
   };
 
-  return service;
+  return {
+    ...service,
+    getState: () => state,
+    setState: (newState: FlashcardServiceState) => {
+      state = newState;
+    },
+    resetState: () => {
+      state = {
+        cards: [],
+        sessionHistory: [],
+        learningStreak: {
+          currentStreak: 0,
+          longestStreak: 0,
+          lastStudyDate: null,
+          studyDates: []
+        },
+        achievements: []
+      };
+    },
+    loadState: async () => {
+      const data = await dataRepository.loadData();
+      state = {
+        cards: data.cards,
+        sessionHistory: data.sessionHistory,
+        learningStreak: data.learningStreak,
+        achievements: data.achievements
+      };
+    },
+    saveState: async () => {
+      await dataRepository.saveData(state);
+    }
+  };
 }
 
 /**
@@ -404,7 +419,10 @@ export function createDefaultFlashcardService(
   if (loadExistingData && service.loadState) {
     // Load existing data asynchronously
     service.loadState().catch((error: unknown) => {
-      console.error('Failed to load existing flashcard data:', error instanceof Error ? error.message : 'Unknown error');
+      console.error(
+        'Failed to load existing flashcard data:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     });
   }
 

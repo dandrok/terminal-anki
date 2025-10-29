@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { intro, outro, confirm, isCancel } from '@clack/prompts';
+import { intro, outro, confirm } from '@clack/prompts';
 
 export const showIntro = (): void => {
   intro(chalk.cyan('※ Terminal Anki - Flashcard Learning System'));

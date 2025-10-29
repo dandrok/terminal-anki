@@ -1,5 +1,3 @@
-import { SERVICE_TOKENS } from './index.js';
-
 /**
  * Dependency Injection Decorators
  * Modern TypeScript decorators for automatic dependency registration

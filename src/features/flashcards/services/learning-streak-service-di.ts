@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ILearningStreakService, IDataRepository } from '../../../shared/interfaces/services.js';
 import { LearningStreak } from '../domain';
 
@@ -17,10 +18,7 @@ export class LearningStreakService implements ILearningStreakService {
     try {
       const data = await this.dataRepository.loadData();
       const { learningStreak } = data;
-      const updatedStreak = this.calculateUpdatedStreak(
-        learningStreak,
-        studyDate
-      );
+      const updatedStreak = this.calculateUpdatedStreak(learningStreak, studyDate);
 
       // Save updated streak
       await this.dataRepository.saveData({
@@ -44,7 +42,7 @@ export class LearningStreakService implements ILearningStreakService {
     try {
       const data = await this.dataRepository.loadData();
       return data.learningStreak.currentStreak;
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }
@@ -56,7 +54,7 @@ export class LearningStreakService implements ILearningStreakService {
     try {
       const data = await this.dataRepository.loadData();
       return data.learningStreak.longestStreak;
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }
@@ -65,7 +63,7 @@ export class LearningStreakService implements ILearningStreakService {
     try {
       const data = await this.dataRepository.loadData();
       return data.learningStreak.lastStudyDate ? new Date(data.learningStreak.lastStudyDate) : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -77,7 +75,7 @@ export class LearningStreakService implements ILearningStreakService {
     try {
       const data = await this.dataRepository.loadData();
       return data.learningStreak.studyDates.map((date: string) => new Date(date));
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }
@@ -143,10 +141,11 @@ export class LearningStreakService implements ILearningStreakService {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-            return studyDates.some((date: string) => {
-                                       const dateStr = new Date(date).toISOString().split('T')[0];
-                                       return dateStr === today || dateStr === yesterdayStr;
-                                     });    } catch (error) {
+      return studyDates.some((date: string) => {
+        const dateStr = new Date(date).toISOString().split('T')[0];
+        return dateStr === today || dateStr === yesterdayStr;
+      });
+    } catch (_error) {
       return false;
     }
   }
@@ -157,8 +156,10 @@ export class LearningStreakService implements ILearningStreakService {
       const { studyDates } = data.learningStreak;
       const today = new Date().toISOString().split('T')[0];
 
-      return studyDates.some((date: string) => new Date(date).toISOString().split('T')[0] === today);
-    } catch (error) {
+      return studyDates.some(
+        (date: string) => new Date(date).toISOString().split('T')[0] === today
+      );
+    } catch (_error) {
       return false;
     }
   }
@@ -166,11 +167,13 @@ export class LearningStreakService implements ILearningStreakService {
   /**
    * Get streak visualization
    */
-  async getStreakVisualization(days: number = 30): Promise<Array<{
-    date: string;
-    studied: boolean;
-    isToday: boolean;
-  }>> {
+  async getStreakVisualization(days: number = 30): Promise<
+    Array<{
+      date: string;
+      studied: boolean;
+      isToday: boolean;
+    }>
+  > {
     const visualization: Array<{ date: string; studied: boolean; isToday: boolean }> = [];
     const studyDates = await this.getStudyDates();
     const today = new Date().toISOString().split('T')[0];

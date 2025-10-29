@@ -14,10 +14,7 @@ export class AchievementService implements IAchievementService {
 
   private achievements: Map<string, Achievement> = new Map();
 
-  constructor(
-    private flashcardService: IFlashcardService,
-    private sessionService: ISessionService
-  ) {
+  constructor(private sessionService: ISessionService) {
     this.initializeAchievements();
   }
 

@@ -7,7 +7,7 @@ import {
   Achievement
 } from '../domain';
 import { updateSpacedRepetition } from './spaced-repetition-service';
-import { checkAchievements, initializeAchievements } from './achievement-service';
+import { checkAchievements } from './achievement-service';
 import { updateLearningStreak } from './learning-streak-service';
 import { getBasicStats, getExtendedStats } from './stats-service';
 import { recordStudySession } from './session-service';

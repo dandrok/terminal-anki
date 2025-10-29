@@ -19,7 +19,7 @@ describe('achievement-service', () => {
       currentStreak: 0,
       longestStreak: 0,
       lastStudyDate: null,
-      studyDates: [],
+      studyDates: []
     };
     mockCurrentSession = {
       id: 's1',
@@ -30,7 +30,7 @@ describe('achievement-service', () => {
       incorrectAnswers: 0,
       averageDifficulty: 0,
       sessionType: 'due',
-      quitEarly: false,
+      quitEarly: false
     };
   });
 
@@ -56,7 +56,7 @@ describe('achievement-service', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       });
       const updatedAchievements = checkAchievements(
         mockAchievements,
@@ -82,7 +82,7 @@ describe('achievement-service', () => {
           repetitions: 0,
           nextReview: new Date(),
           lastReview: null,
-          createdAt: new Date(),
+          createdAt: new Date()
         });
       }
       const updatedAchievements = checkAchievements(
@@ -113,7 +113,12 @@ describe('achievement-service', () => {
 
     it('should unlock "sessions_10" achievement after 10 completed sessions', () => {
       for (let i = 0; i < 10; i++) {
-        mockSessionHistory.push({ ...mockCurrentSession, id: `s${i}`, cardsStudied: 1, correctAnswers: 1 });
+        mockSessionHistory.push({
+          ...mockCurrentSession,
+          id: `s${i}`,
+          cardsStudied: 1,
+          correctAnswers: 1
+        });
       }
       const updatedAchievements = checkAchievements(
         mockAchievements,
@@ -138,7 +143,7 @@ describe('achievement-service', () => {
         repetitions: 100, // Directly set to 100 for the test
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       });
 
       const updatedAchievements = checkAchievements(
@@ -224,7 +229,7 @@ describe('achievement-service', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       });
       const updatedAchievements = checkAchievements(
         mockAchievements,

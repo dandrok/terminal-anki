@@ -1,4 +1,4 @@
-import { Achievement, Flashcard, StudySessionRecord, LearningStreak } from '../domain';
+import { Flashcard, StudySessionRecord, LearningStreak, Achievement } from '../domain';
 
 export const initializeAchievements = (): Achievement[] => {
   return [

@@ -18,7 +18,7 @@ describe('recordStudySession', () => {
       incorrectAnswers: 2,
       averageDifficulty: 2.5,
       sessionType: 'due',
-      quitEarly: false,
+      quitEarly: false
     };
 
     const newSession = recordStudySession(sessionData);
@@ -44,7 +44,7 @@ describe('recordStudySession', () => {
       incorrectAnswers: 2,
       averageDifficulty: 2.0,
       sessionType: 'custom',
-      quitEarly: true,
+      quitEarly: true
     };
 
     const newSession = recordStudySession(sessionData);

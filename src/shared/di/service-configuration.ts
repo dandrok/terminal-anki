@@ -15,7 +15,13 @@ import { SessionService } from '../../features/flashcards/services/session-servi
 import { SpacedRepetitionService } from '../../features/flashcards/services/spaced-repetition-service-di.js';
 import { AchievementService } from '../../features/flashcards/services/achievement-service-di.js';
 import { LearningStreakService } from '../../features/flashcards/services/learning-streak-service-di.js';
-
+import { BackupManager } from '../../features/flashcards/services/backup-manager-di.js';
+import { FilterService } from '../../features/flashcards/services/filter-service-di.js';
+import { AnalyticsService } from '../../features/flashcards/services/analytics-service-di.js';
+import { ValidationService } from '../services/validation-service.js';
+import { ConfigService } from '../services/config-service.js';
+import { CliService } from '../services/cli-service.js';
+import { UiService } from '../services/ui-service.js';
 /**
  * Service Configuration and Registration
  * Sets up all services with their dependencies
@@ -42,34 +48,37 @@ export function configureServices(container: DIContainer): void {
       if (!dataRepositoryResult.success) {
         throw new Error(`Failed to resolve DataRepository: ${dataRepositoryResult.error.message}`);
       }
-      return new LearningStreakService(
-        dataRepositoryResult.data as IDataRepository
-      );
+      return new LearningStreakService(dataRepositoryResult.data as IDataRepository);
     },
     [SERVICE_TOKENS.DATA_REPOSITORY]
   );
 
   // Register session service (depends on flashcard service)
-  container.registerSingleton(
-    SERVICE_TOKENS.SESSION_SERVICE,
-    () => {
-      const flashcardServiceResult = container.resolve(SERVICE_TOKENS.FLASHCARD_SERVICE);
-      if (!flashcardServiceResult.success) {
-        throw new Error(`Failed to resolve FlashcardService: ${flashcardServiceResult.error.message}`);
-      }
-      return new SessionService(
-        flashcardServiceResult.data as IFlashcardService
-      );
-    },
-    [SERVICE_TOKENS.FLASHCARD_SERVICE]
-  );
+  container.registerSingleton(SERVICE_TOKENS.SESSION_SERVICE, () => {
+    return new SessionService();
+  });
 
+  container.registerSingleton(SERVICE_TOKENS.VALIDATION_SERVICE, () => new ValidationService());
   // Register statistics service (depends on data repository and spaced repetition)
+  container.registerSingleton(
+    SERVICE_TOKENS.BACKUP_MANAGER,
+    () => new BackupManager(container.resolve(SERVICE_TOKENS.DATA_REPOSITORY) as any)
+  );
+  container.registerSingleton(SERVICE_TOKENS.FILTER_SERVICE, () => new FilterService());
+  container.registerSingleton(
+    SERVICE_TOKENS.ANALYTICS_SERVICE,
+    () => new AnalyticsService(container.resolve(SERVICE_TOKENS.SESSION_SERVICE) as any)
+  );
+  container.registerSingleton(SERVICE_TOKENS.CONFIG_SERVICE, () => new ConfigService());
+  container.registerSingleton(SERVICE_TOKENS.CLI_SERVICE, () => new CliService());
+  container.registerSingleton(SERVICE_TOKENS.UI_SERVICE, () => new UiService());
   container.registerSingleton(
     SERVICE_TOKENS.STATISTICS_SERVICE,
     () => {
       const dataRepositoryResult = container.resolve(SERVICE_TOKENS.DATA_REPOSITORY);
-      const spacedRepetitionServiceResult = container.resolve(SERVICE_TOKENS.SPACED_REPETITION_SERVICE);
+      const spacedRepetitionServiceResult = container.resolve(
+        SERVICE_TOKENS.SPACED_REPETITION_SERVICE
+      );
 
       if (!dataRepositoryResult.success) {
         throw new Error(`Failed to resolve DataRepository: ${dataRepositoryResult.error.message}`);
@@ -92,22 +101,15 @@ export function configureServices(container: DIContainer): void {
   container.registerSingleton(
     SERVICE_TOKENS.ACHIEVEMENT_SERVICE,
     () => {
-      const flashcardServiceResult = container.resolve(SERVICE_TOKENS.FLASHCARD_SERVICE);
       const sessionServiceResult = container.resolve(SERVICE_TOKENS.SESSION_SERVICE);
 
-      if (!flashcardServiceResult.success) {
-        throw new Error(`Failed to resolve FlashcardService: ${flashcardServiceResult.error.message}`);
-      }
       if (!sessionServiceResult.success) {
         throw new Error(`Failed to resolve SessionService: ${sessionServiceResult.error.message}`);
       }
 
-      return new AchievementService(
-        flashcardServiceResult.data as IFlashcardService,
-        sessionServiceResult.data as ISessionService
-      );
+      return new AchievementService(sessionServiceResult.data as ISessionService);
     },
-    [SERVICE_TOKENS.FLASHCARD_SERVICE, SERVICE_TOKENS.SESSION_SERVICE]
+    [SERVICE_TOKENS.SESSION_SERVICE]
   );
 
   // Register flashcard service (depends on multiple services)
@@ -115,7 +117,9 @@ export function configureServices(container: DIContainer): void {
     SERVICE_TOKENS.FLASHCARD_SERVICE,
     () => {
       const dataRepositoryResult = container.resolve(SERVICE_TOKENS.DATA_REPOSITORY);
-      const spacedRepetitionServiceResult = container.resolve(SERVICE_TOKENS.SPACED_REPETITION_SERVICE);
+      const spacedRepetitionServiceResult = container.resolve(
+        SERVICE_TOKENS.SPACED_REPETITION_SERVICE
+      );
       const achievementServiceResult = container.resolve(SERVICE_TOKENS.ACHIEVEMENT_SERVICE);
       const learningStreakServiceResult = container.resolve(SERVICE_TOKENS.LEARNING_STREAK_SERVICE);
       const sessionServiceResult = container.resolve(SERVICE_TOKENS.SESSION_SERVICE);
@@ -220,13 +224,13 @@ export function getServiceConfiguration(): Array<{
     {
       token: SERVICE_TOKENS.ACHIEVEMENT_SERVICE,
       name: 'AchievementService',
-      dependencies: [SERVICE_TOKENS.FLASHCARD_SERVICE, SERVICE_TOKENS.SESSION_SERVICE],
+      dependencies: [SERVICE_TOKENS.SESSION_SERVICE],
       singleton: true
     },
     {
       token: SERVICE_TOKENS.SESSION_SERVICE,
       name: 'SessionService',
-      dependencies: [SERVICE_TOKENS.FLASHCARD_SERVICE],
+      dependencies: [],
       singleton: true
     },
     {

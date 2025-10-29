@@ -15,7 +15,7 @@ export class SessionService implements ISessionService {
   private sessions: Map<string, StudySessionRecord> = new Map();
   private currentSession: StudySessionRecord | null = null;
 
-  constructor(private flashcardService: IFlashcardService) {}
+  constructor() {}
 
   /**
    * Create a new study session

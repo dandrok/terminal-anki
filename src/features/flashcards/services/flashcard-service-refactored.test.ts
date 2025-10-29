@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createFlashcardService } from './flashcard-service-refactored.js';
-import { Flashcard, ReviewQuality } from '../domain';
+import { Flashcard } from '../domain';
 
 // Mock dependencies
 const mockDataRepository = {
@@ -13,13 +13,13 @@ const mockDataRepository = {
       currentStreak: 0,
       longestStreak: 0,
       lastStudyDate: null,
-      studyDates: [],
+      studyDates: []
     },
-    achievements: [],
+    achievements: []
   }),
   saveData: vi.fn().mockResolvedValue(undefined),
   backupData: vi.fn().mockResolvedValue('backup-path'),
-  restoreFromBackup: vi.fn().mockResolvedValue(undefined),
+  restoreFromBackup: vi.fn().mockResolvedValue(undefined)
 };
 
 const mockSpacedRepetitionService = {
@@ -29,10 +29,10 @@ const mockSpacedRepetitionService = {
     easiness: card.easiness + (quality >= 3 ? 0.1 : -0.1),
     interval: quality >= 3 ? card.interval * 2 : 1,
     repetitions: card.repetitions + (quality >= 3 ? 1 : 0),
-    nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000)
   })),
   getCardDifficulty: vi.fn().mockReturnValue('new' as const),
-  isCardDue: vi.fn().mockReturnValue(false),
+  isCardDue: vi.fn().mockReturnValue(false)
 };
 
 const mockAchievementService = {
@@ -41,7 +41,7 @@ const mockAchievementService = {
   checkAchievements: vi.fn().mockReturnValue([]),
   updateAchievement: vi.fn(),
   unlockAchievement: vi.fn(),
-  getAllAchievements: vi.fn().mockReturnValue([]),
+  getAllAchievements: vi.fn().mockReturnValue([])
 };
 
 const mockLearningStreakService = {
@@ -51,12 +51,12 @@ const mockLearningStreakService = {
     currentStreak: 1,
     longestStreak: 1,
     lastStudyDate: new Date(),
-    studyDates: ['2025-01-01'],
+    studyDates: ['2025-01-01']
   }),
   getCurrentStreak: vi.fn().mockReturnValue(1),
   getLongestStreak: vi.fn().mockReturnValue(1),
   getStudyDates: vi.fn().mockReturnValue(['2025-01-01']),
-  calculateStreak: vi.fn().mockReturnValue({ current: 1, longest: 1 }),
+  calculateStreak: vi.fn().mockReturnValue({ current: 1, longest: 1 })
 };
 
 const mockSessionService = {
@@ -65,15 +65,58 @@ const mockSessionService = {
   createSession: vi.fn().mockReturnValue({
     id: 'session-1',
     startTime: new Date(),
-    type: 'due',
+    type: 'due'
   }),
   endSession: vi.fn(),
   getCurrentSession: vi.fn().mockReturnValue(null),
-  recordCardReview: vi.fn(),
+  recordCardReview: vi.fn()
 };
 
 describe('FlashcardService Refactored', () => {
   let service: ReturnType<typeof createFlashcardService>;
+
+  const mockValidationService = {
+    validateFlashcardCreation: vi.fn().mockImplementation((front, back, tags) => ({
+      isValid: true,
+      data: { front, back, tags: tags || [] },
+      errors: []
+    })),
+    validateCardUpdate: vi.fn().mockImplementation((_id, data) => ({
+      isValid: true,
+      data: data,
+      errors: []
+    })),
+    validateSearchQuery: vi.fn().mockImplementation(query => ({
+      isValid: true,
+      data: query,
+      errors: []
+    })),
+    validateCardReview: vi.fn().mockImplementation((cardId, quality) => ({
+      isValid: true,
+      data: { cardId, quality },
+      errors: []
+    })),
+    validateCustomStudyFilters: vi.fn().mockReturnValue({ isValid: true, data: {}, errors: [] }),
+    validateCardId: vi.fn().mockImplementation(id => ({ isValid: true, data: id, errors: [] })),
+    validateStringArray: vi.fn().mockImplementation(arr => ({
+      isValid: true,
+      data: arr || [],
+      errors: []
+    })),
+    validateString: vi.fn().mockImplementation(str => ({ isValid: true, data: str, errors: [] })),
+    validateNumber: vi.fn().mockImplementation(num => ({ isValid: true, data: num, errors: [] })),
+    validateDate: vi.fn().mockImplementation(date => ({ isValid: true, data: date, errors: [] })),
+    validateReviewQuality: vi.fn().mockImplementation(quality => ({
+      isValid: true,
+      data: quality,
+      errors: []
+    })),
+    validateSessionData: vi.fn().mockImplementation(session => ({
+      isValid: true,
+      data: session,
+      errors: []
+    }))
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -83,6 +126,7 @@ describe('FlashcardService Refactored', () => {
       achievementService: mockAchievementService,
       learningStreakService: mockLearningStreakService,
       sessionService: mockSessionService,
+      validationService: mockValidationService as any
     });
   });
 
@@ -124,7 +168,7 @@ describe('FlashcardService Refactored', () => {
       const card = service.addCard('Question', 'Answer');
       const updated = service.updateCard(card.id, {
         front: 'Updated Question',
-        tags: ['new-tag'],
+        tags: ['new-tag']
       });
 
       expect(updated).toBeTruthy();
@@ -166,8 +210,13 @@ describe('FlashcardService Refactored', () => {
     it('should search cards by text', () => {
       const results = service.searchCards('programming');
       expect(results).toHaveLength(2);
-      expect(results.every(card => card.front.toLowerCase().includes('programming') ||
-                                     card.back.toLowerCase().includes('programming'))).toBe(true);
+      expect(
+        results.every(
+          card =>
+            card.front.toLowerCase().includes('programming') ||
+            card.back.toLowerCase().includes('programming')
+        )
+      ).toBe(true);
     });
 
     it('should get all unique tags', () => {
@@ -198,7 +247,7 @@ describe('FlashcardService Refactored', () => {
         easiness: 2.6,
         interval: 2,
         repetitions: 1,
-        nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000)
       });
     });
 
@@ -223,7 +272,7 @@ describe('FlashcardService Refactored', () => {
         type: 'due',
         cardsStudied: 0,
         correctAnswers: 0,
-        incorrectAnswers: 0,
+        incorrectAnswers: 0
       });
 
       service.reviewCard(card.id, 4);
@@ -251,7 +300,7 @@ describe('FlashcardService Refactored', () => {
 
     it('should count due cards', () => {
       mockSpacedRepetitionService.isCardDue.mockReturnValue(true);
-      mockSpacedRepetitionService.isCardDue.mockImplementation((card, date) => {
+      mockSpacedRepetitionService.isCardDue.mockImplementation(card => {
         return card.id === service.getAllCards()[0].id;
       });
 
@@ -271,10 +320,28 @@ describe('FlashcardService Refactored', () => {
 
     it('should set new state', () => {
       const newState = {
-        cards: [{ id: 'test', front: 'Test', back: 'Answer', tags: [], easiness: 2.5, interval: 1, repetitions: 0, nextReview: new Date(), lastReview: null, createdAt: new Date() }],
+        cards: [
+          {
+            id: 'test',
+            front: 'Test',
+            back: 'Answer',
+            tags: [],
+            easiness: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReview: null,
+            createdAt: new Date()
+          }
+        ],
         sessionHistory: [],
-        learningStreak: { currentStreak: 5, longestStreak: 10, lastStudyDate: new Date(), studyDates: ['2025-01-01'] },
-        achievements: [],
+        learningStreak: {
+          currentStreak: 5,
+          longestStreak: 10,
+          lastStudyDate: new Date(),
+          studyDates: ['2025-01-01']
+        },
+        achievements: []
       };
 
       service.setState(newState);
@@ -292,10 +359,23 @@ describe('FlashcardService Refactored', () => {
 
     it('should load state asynchronously', async () => {
       const mockData = {
-        cards: [{ id: 'loaded', front: 'Loaded', back: 'Answer', tags: [], easiness: 2.5, interval: 1, repetitions: 0, nextReview: new Date(), lastReview: null, createdAt: new Date() }],
+        cards: [
+          {
+            id: 'loaded',
+            front: 'Loaded',
+            back: 'Answer',
+            tags: [],
+            easiness: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReview: null,
+            createdAt: new Date()
+          }
+        ],
         sessionHistory: [],
         learningStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, studyDates: [] },
-        achievements: [],
+        achievements: []
       };
 
       mockDataRepository.loadData.mockResolvedValue(mockData);
@@ -322,21 +402,21 @@ describe('FlashcardService Refactored', () => {
       expect(wasUpdated).toBe(false);
     });
 
-    it('should record study session', () => {
+    it('should record study session', async () => {
       const sessionData = {
         startTime: new Date(),
-        type: 'due' as const,
+        sessionType: 'due' as const,
         cardsStudied: 10,
         correctAnswers: 8,
         incorrectAnswers: 2,
         averageDifficulty: 2.5,
-        duration: 300000, // 5 minutes
+        duration: 300000 // 5 minutes
       };
 
-      const session = service.recordStudySession(sessionData);
+      const session = await service.recordStudySession(sessionData);
 
       expect(session.id).toBeTruthy();
-      expect(session.type).toBe('due');
+      expect(session.sessionType).toBe('due');
       expect(session.cardsStudied).toBe(10);
       expect(mockSessionService.createSession).toHaveBeenCalledWith('due');
       expect(mockDataRepository.saveData).toHaveBeenCalled();

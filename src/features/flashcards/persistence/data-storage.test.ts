@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
-import path from 'path';
-import { tmpdir } from 'os';
 
 const mockFiles: Record<string, string> = {};
 
@@ -21,7 +19,7 @@ vi.mock('fs', () => ({
     unlinkSync: vi.fn((path: string) => delete mockFiles[path]),
     statSync: vi.fn(() => ({ size: 100, mtime: new Date() })),
     cpSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src])),
-    copyFileSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src])),
+    copyFileSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src]))
   },
   existsSync: vi.fn((path: string) => path in mockFiles),
   readFileSync: vi.fn((path: string) => {
@@ -37,22 +35,20 @@ vi.mock('fs', () => ({
   unlinkSync: vi.fn((path: string) => delete mockFiles[path]),
   statSync: vi.fn(() => ({ size: 100, mtime: new Date() })),
   cpSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src])),
-  copyFileSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src])),
+  copyFileSync: vi.fn((src: string, dest: string) => (mockFiles[dest] = mockFiles[src]))
 }));
 
-import { 
-  loadData, 
-  saveData, 
-  updateData, 
-  backupData, 
-  getDataStats, 
-  validateDataIntegrity, 
-  clearAllData, 
-  restoreFromBackup, 
-  DataStore 
+import {
+  loadData,
+  saveData,
+  updateData,
+  backupData,
+  getDataStats,
+  validateDataIntegrity,
+  clearAllData,
+  restoreFromBackup,
+  DataStore
 } from './data-storage.js';
-
-
 
 // Mock the DATA_FILE constant - we need to mock path.join and the module resolution
 vi.mock('path', () => ({
@@ -64,7 +60,7 @@ vi.mock('path', () => ({
       }
       return args.join('/');
     }),
-    dirname: vi.fn(() => '/test/dir'),
+    dirname: vi.fn(() => '/test/dir')
   },
   join: vi.fn((...args: string[]) => {
     // Return our test file path when it matches the expected pattern
@@ -73,20 +69,18 @@ vi.mock('path', () => ({
     }
     return args.join('/');
   }),
-  dirname: vi.fn(() => '/test/dir'),
+  dirname: vi.fn(() => '/test/dir')
 }));
 
 vi.mock('url', () => ({
   default: {
-    fileURLToPath: vi.fn(() => '/test/fake/path/data-storage.js'),
+    fileURLToPath: vi.fn(() => '/test/fake/path/data-storage.js')
   },
-  fileURLToPath: vi.fn(() => '/test/fake/path/data-storage.js'),
+  fileURLToPath: vi.fn(() => '/test/fake/path/data-storage.js')
 }));
 
 // Test with temporary files
 const TEST_DATA_FILE = '/tmp/test-anki.json'; // Use a fixed path for mocked fs
-
-
 
 // Mock the data file path
 const originalDataFile = process.env.TEST_DATA_FILE;
@@ -97,7 +91,6 @@ beforeEach(() => {
     delete mockFiles[key];
   }
   vi.clearAllMocks(); // Clear all Vitest mocks
-
 });
 
 afterEach(() => {
@@ -123,8 +116,8 @@ describe('Data Storage', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
-      },
+        createdAt: new Date()
+      }
     ],
     sessionHistory: [
       {
@@ -136,14 +129,14 @@ describe('Data Storage', () => {
         incorrectAnswers: 2,
         averageDifficulty: 2.5,
         sessionType: 'due',
-        quitEarly: false,
-      },
+        quitEarly: false
+      }
     ],
     learningStreak: {
       currentStreak: 5,
       longestStreak: 10,
       lastStudyDate: new Date(),
-      studyDates: ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'],
+      studyDates: ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05']
     },
     achievements: [
       {
@@ -153,9 +146,9 @@ describe('Data Storage', () => {
         icon: '◎',
         category: 'cards',
         progress: { current: 1, required: 1, description: 'cards created' },
-        unlockedAt: new Date(),
-      },
-    ],
+        unlockedAt: new Date()
+      }
+    ]
   });
 
   describe('loadData', () => {
@@ -222,18 +215,20 @@ describe('Data Storage', () => {
     it('should handle backward compatibility for missing tags', () => {
       const dataWithoutTags = {
         ...createMockDataStore(),
-        cards: [{
-          id: 'test-card-no-tags',
-          front: 'Q',
-          back: 'A',
-          tags: undefined, // Explicitly undefined
-          easiness: 2.5,
-          interval: 1,
-          repetitions: 0,
-          nextReview: new Date(),
-          lastReview: null,
-          createdAt: new Date(),
-        }],
+        cards: [
+          {
+            id: 'test-card-no-tags',
+            front: 'Q',
+            back: 'A',
+            tags: undefined, // Explicitly undefined
+            easiness: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReview: null,
+            createdAt: new Date()
+          }
+        ]
       };
 
       fs.writeFileSync(TEST_DATA_FILE, JSON.stringify(dataWithoutTags));
@@ -280,20 +275,23 @@ describe('Data Storage', () => {
       const saveResult = saveData(initialData);
       expect(saveResult.success).toBe(true);
 
-      const updateResult = updateData((data) => ({
+      const updateResult = updateData(data => ({
         ...data,
-        cards: [...data.cards, {
-          id: 'new-card',
-          front: 'New Question',
-          back: 'New Answer',
-          tags: ['new'],
-          easiness: 2.5,
-          interval: 1,
-          repetitions: 0,
-          nextReview: new Date(),
-          lastReview: null,
-          createdAt: new Date(),
-        }],
+        cards: [
+          ...data.cards,
+          {
+            id: 'new-card',
+            front: 'New Question',
+            back: 'New Answer',
+            tags: ['new'],
+            easiness: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReview: null,
+            createdAt: new Date()
+          }
+        ]
       }));
 
       expect(updateResult.success).toBe(true);
@@ -310,7 +308,7 @@ describe('Data Storage', () => {
       // Write invalid JSON to simulate load failure
       fs.writeFileSync(TEST_DATA_FILE, 'invalid json');
 
-      const updateResult = updateData((data) => data);
+      const updateResult = updateData(data => data);
 
       expect(updateResult.success).toBe(false);
     });
@@ -400,9 +398,9 @@ describe('Data Storage', () => {
             repetitions: 0,
             nextReview: new Date(),
             lastReview: null,
-            createdAt: new Date(),
-          },
-        ],
+            createdAt: new Date()
+          }
+        ]
       };
       saveData(invalidData);
 
@@ -421,8 +419,8 @@ describe('Data Storage', () => {
         cards: [
           createMockDataStore().cards[0],
           { ...createMockDataStore().cards[0], id: 'duplicate-id' },
-          { ...createMockDataStore().cards[0], id: 'duplicate-id' },
-        ],
+          { ...createMockDataStore().cards[0], id: 'duplicate-id' }
+        ]
       };
       saveData(duplicateData);
 
@@ -431,7 +429,9 @@ describe('Data Storage', () => {
       expect(validationResult.success).toBe(true);
       if (validationResult.success) {
         expect(validationResult.data.isValid).toBe(false);
-        expect(validationResult.data.issues.some(issue => issue.includes('Duplicate card IDs'))).toBe(true);
+        expect(
+          validationResult.data.issues.some(issue => issue.includes('Duplicate card IDs'))
+        ).toBe(true);
       }
     });
   });

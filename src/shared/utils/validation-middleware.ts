@@ -68,7 +68,7 @@ export function validateMultiple(
 export function withValidation<TArgs extends any[], TReturn>(
   validator: (args: TArgs) => Result<any, Error>,
   fn: (...args: TArgs) => TReturn
-) {
+): (...args: TArgs) => TReturn | Result<never, Error> {
   return function (...args: TArgs): TReturn | Result<never, Error> {
     const validationResult = validator(args);
 
@@ -86,18 +86,20 @@ export function withValidation<TArgs extends any[], TReturn>(
 export async function withAsyncValidation<TArgs extends any[], TReturn>(
   validator: (args: TArgs) => Promise<Result<any, Error>>,
   fn: (...args: TArgs) => Promise<TReturn>
-): Promise<TReturn | Result<never, Error>> {
-  try {
-    const validationResult = await validator(arguments as any as TArgs);
+) {
+  return async function (...args: TArgs): Promise<TReturn | Result<never, Error>> {
+    try {
+      const validationResult = await validator(args);
 
-    if (!validationResult.success) {
-      return validationResult as any;
+      if (!validationResult.success) {
+        return validationResult as any;
+      }
+
+      return await fn(...args);
+    } catch (error) {
+      return Err(error instanceof Error ? error : new Error('Unknown error'));
     }
-
-    return await fn(...(arguments as any as TArgs));
-  } catch (error) {
-    return Err(error instanceof Error ? error : new Error('Unknown error'));
-  }
+  };
 }
 
 /**

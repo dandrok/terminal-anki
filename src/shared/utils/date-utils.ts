@@ -75,7 +75,7 @@ export const getLastFourWeeks = (): Array<{ start: Date; end: Date; label: strin
 
   for (let i = 3; i >= 0; i--) {
     const weekStart = addDays(now, -(i * 7 + 6));
-    const weekEnd = addDays(now, -(i * 7));
+    addDays(now, -(i * 7));
     const weekRange = getWeekRange(weekStart);
     weeks.push({
       ...weekRange,

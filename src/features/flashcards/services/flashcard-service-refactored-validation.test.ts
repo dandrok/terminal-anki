@@ -14,13 +14,13 @@ const createMockDependencies = () => {
         currentStreak: 0,
         longestStreak: 0,
         lastStudyDate: null,
-        studyDates: [],
+        studyDates: []
       },
-      achievements: [],
+      achievements: []
     }),
     saveData: vi.fn().mockResolvedValue(undefined),
     backupData: vi.fn().mockResolvedValue('backup-path'),
-    restoreFromBackup: vi.fn().mockResolvedValue(undefined),
+    restoreFromBackup: vi.fn().mockResolvedValue(undefined)
   };
 
   const mockSpacedRepetitionService = {
@@ -30,10 +30,10 @@ const createMockDependencies = () => {
       easiness: card.easiness + (quality >= 3 ? 0.1 : -0.1),
       interval: quality >= 3 ? card.interval * 2 : 1,
       repetitions: card.repetitions + (quality >= 3 ? 1 : 0),
-      nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000)
     })),
     getCardDifficulty: vi.fn().mockReturnValue('new' as const),
-    isCardDue: vi.fn().mockReturnValue(false),
+    isCardDue: vi.fn().mockReturnValue(false)
   };
 
   const mockAchievementService = {
@@ -42,7 +42,7 @@ const createMockDependencies = () => {
     checkAchievements: vi.fn().mockReturnValue([]),
     updateAchievement: vi.fn(),
     unlockAchievement: vi.fn(),
-    getAllAchievements: vi.fn().mockReturnValue([]),
+    getAllAchievements: vi.fn().mockReturnValue([])
   };
 
   const mockLearningStreakService = {
@@ -52,12 +52,12 @@ const createMockDependencies = () => {
       currentStreak: 1,
       longestStreak: 1,
       lastStudyDate: new Date(),
-      studyDates: ['2025-01-01'],
+      studyDates: ['2025-01-01']
     }),
     getCurrentStreak: vi.fn().mockReturnValue(1),
     getLongestStreak: vi.fn().mockReturnValue(1),
     getStudyDates: vi.fn().mockReturnValue(['2025-01-01']),
-    calculateStreak: vi.fn().mockReturnValue({ current: 1, longest: 1 }),
+    calculateStreak: vi.fn().mockReturnValue({ current: 1, longest: 1 })
   };
 
   const mockSessionService = {
@@ -66,11 +66,11 @@ const createMockDependencies = () => {
     createSession: vi.fn().mockReturnValue({
       id: 'session-1',
       startTime: new Date(),
-      type: 'due',
+      type: 'due'
     }),
     endSession: vi.fn(),
     getCurrentSession: vi.fn().mockReturnValue(null),
-    recordCardReview: vi.fn(),
+    recordCardReview: vi.fn()
   };
 
   const validationService = new ValidationService();
@@ -81,7 +81,7 @@ const createMockDependencies = () => {
     achievementService: mockAchievementService,
     learningStreakService: mockLearningStreakService,
     sessionService: mockSessionService,
-    validationService,
+    validationService
   };
 };
 
@@ -206,7 +206,7 @@ describe('FlashcardService Refactored with Validation', () => {
         tags: ['tag1'],
         difficulty: 'new' as const,
         limit: 10,
-        randomOrder: false,
+        randomOrder: false
       };
 
       expect(() => {
@@ -215,7 +215,7 @@ describe('FlashcardService Refactored with Validation', () => {
 
       // Invalid difficulty should fail
       const invalidFilters = {
-        difficulty: 'invalid' as any,
+        difficulty: 'invalid' as any
       };
 
       expect(() => {
@@ -223,11 +223,10 @@ describe('FlashcardService Refactored with Validation', () => {
       }).toThrow('Validation failed');
     });
 
-    it('should validate session data recording', () => {
+    it('should validate session data recording', async () => {
       const validSessionData = {
-        id: 'session-1',
         startTime: new Date(),
-        endTime: null,
+        endTime: new Date(),
         cardsStudied: 10,
         correctAnswers: 8,
         incorrectAnswers: 2,
@@ -235,21 +234,17 @@ describe('FlashcardService Refactored with Validation', () => {
         duration: 300000,
         sessionType: 'due' as const,
         quitEarly: false,
-        customStudyFilters: undefined,
+        customStudyFilters: undefined
       };
 
-      expect(() => {
-        service.recordStudySession(validSessionData);
-      }).not.toThrow();
-
+      await expect(service.recordStudySession(validSessionData)).resolves.toBeDefined();
       expect(mockDeps.dataRepository.saveData).toHaveBeenCalled();
     });
 
-    it('should reject invalid session data', () => {
+    it('should reject invalid session data', async () => {
       const invalidSessionData = {
-        id: 'session-1',
         startTime: new Date(),
-        endTime: null,
+        endTime: new Date(),
         cardsStudied: -5, // Negative number
         correctAnswers: 8,
         incorrectAnswers: 2,
@@ -257,12 +252,12 @@ describe('FlashcardService Refactored with Validation', () => {
         duration: 300000,
         sessionType: 'due' as const,
         quitEarly: false,
-        customStudyFilters: undefined,
+        customStudyFilters: undefined
       };
 
-      expect(() => {
-        service.recordStudySession(invalidSessionData);
-      }).toThrow(/Invalid session data/);
+      await expect(service.recordStudySession(invalidSessionData)).rejects.toThrow(
+        /Invalid session data/
+      );
     });
 
     it('should validate tag updates', () => {

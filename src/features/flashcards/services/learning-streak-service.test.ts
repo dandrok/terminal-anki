@@ -13,7 +13,7 @@ describe('updateLearningStreak', () => {
       currentStreak: 0,
       longestStreak: 0,
       lastStudyDate: null,
-      studyDates: [],
+      studyDates: []
     };
   });
 

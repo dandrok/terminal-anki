@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { loadFlashcardData, saveFlashcardData, createSampleCards } from './flashcard-data-fs';
 import { Flashcard, StudySessionRecord, LearningStreak, Achievement } from '../domain';
 
@@ -10,18 +8,9 @@ vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
-    writeFileSync: vi.fn(),
-  },
+    writeFileSync: vi.fn()
+  }
 }));
-
-const mockDataFile = path.join(
-  fileURLToPath(import.meta.url),
-  '..',
-  '..',
-  '..',
-  '..',
-  'flashcards.json'
-);
 
 describe('flashcard-data-fs', () => {
   beforeEach(() => {
@@ -36,7 +25,7 @@ describe('flashcard-data-fs', () => {
         cards: [],
         sessionHistory: [],
         learningStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, studyDates: [] },
-        achievements: [],
+        achievements: []
       });
       expect(fs.existsSync).toHaveBeenCalledWith(expect.stringContaining('flashcards.json'));
     });
@@ -52,7 +41,7 @@ describe('flashcard-data-fs', () => {
         repetitions: 0,
         nextReview: new Date('2025-01-01T00:00:00.000Z'),
         lastReview: new Date('2024-12-31T00:00:00.000Z'),
-        createdAt: new Date('2024-12-30T00:00:00.000Z'),
+        createdAt: new Date('2024-12-30T00:00:00.000Z')
       };
       const mockSession: StudySessionRecord = {
         id: 's1',
@@ -63,13 +52,13 @@ describe('flashcard-data-fs', () => {
         incorrectAnswers: 0,
         averageDifficulty: 0,
         sessionType: 'due',
-        quitEarly: false,
+        quitEarly: false
       };
       const mockLearningStreak: LearningStreak = {
         currentStreak: 1,
         longestStreak: 1,
         lastStudyDate: new Date('2025-01-01T00:00:00.000Z'),
-        studyDates: ['2025-01-01'],
+        studyDates: ['2025-01-01']
       };
       const mockAchievement: Achievement = {
         id: 'a1',
@@ -77,14 +66,14 @@ describe('flashcard-data-fs', () => {
         description: 'Desc1',
         icon: 'i',
         category: 'cards',
-        progress: { current: 1, required: 1, description: 'd' },
+        progress: { current: 1, required: 1, description: 'd' }
       };
 
       const mockFileData = {
         cards: [mockFlashcard],
         sessionHistory: [mockSession],
         learningStreak: mockLearningStreak,
-        achievements: [mockAchievement],
+        achievements: [mockAchievement]
       };
 
       (fs.existsSync as vi.Mock).mockReturnValue(true);
@@ -113,7 +102,7 @@ describe('flashcard-data-fs', () => {
         cards: [],
         sessionHistory: [],
         learningStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, studyDates: [] },
-        achievements: [],
+        achievements: []
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading data:', expect.any(Error));
       consoleErrorSpy.mockRestore();
@@ -126,7 +115,7 @@ describe('flashcard-data-fs', () => {
         cards: [],
         sessionHistory: [],
         learningStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, studyDates: [] },
-        achievements: [],
+        achievements: []
       };
       saveFlashcardData(mockData);
       expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -145,7 +134,7 @@ describe('flashcard-data-fs', () => {
         cards: [],
         sessionHistory: [],
         learningStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, studyDates: [] },
-        achievements: [],
+        achievements: []
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving data:', expect.any(Error));
       consoleErrorSpy.mockRestore();

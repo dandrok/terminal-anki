@@ -6,7 +6,7 @@ import {
   searchCardsByField,
   fuzzySearchCards,
   calculateSimilarity,
-  parseSearchQuery,
+  parseSearchQuery
 } from './text-search';
 
 describe('text-search', () => {
@@ -20,7 +20,7 @@ describe('text-search', () => {
     repetitions: 0,
     nextReview: new Date(),
     lastReview: null,
-    createdAt: new Date(),
+    createdAt: new Date()
   };
 
   const mockCards: Flashcard[] = [
@@ -35,20 +35,20 @@ describe('text-search', () => {
       repetitions: 2,
       nextReview: new Date(),
       lastReview: new Date(),
-      createdAt: new Date(),
+      createdAt: new Date()
     },
     {
       id: 'test-card-3',
       front: 'What is Node.js?',
-      back: 'Node.js is a JavaScript runtime built on Chrome\'s V8 engine',
+      back: "Node.js is a JavaScript runtime built on Chrome's V8 engine",
       tags: ['programming', 'nodejs', 'javascript'],
       easiness: 2.3,
       interval: 7,
       repetitions: 4,
       nextReview: new Date(),
       lastReview: new Date(),
-      createdAt: new Date(),
-    },
+      createdAt: new Date()
+    }
   ];
 
   describe('normalizeText', () => {
@@ -105,7 +105,7 @@ describe('text-search', () => {
       const results = searchCardsByField(mockCards, 'what is', {
         searchInFront: true,
         searchInBack: false,
-        searchInTags: false,
+        searchInTags: false
       });
       expect(results).toHaveLength(3);
     });
@@ -114,7 +114,7 @@ describe('text-search', () => {
       const results = searchCardsByField(mockCards, 'library', {
         searchInFront: false,
         searchInBack: true,
-        searchInTags: false,
+        searchInTags: false
       });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe('test-card-2');
@@ -124,7 +124,7 @@ describe('text-search', () => {
       const results = searchCardsByField(mockCards, 'react', {
         searchInFront: false,
         searchInBack: false,
-        searchInTags: true,
+        searchInTags: true
       });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe('test-card-2');

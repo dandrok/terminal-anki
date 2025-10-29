@@ -20,7 +20,7 @@ describe('stats-service', () => {
     nextReview: new Date(now.getTime() - 1000), // Due
     lastReview: null,
     createdAt: new Date(now.getTime() - 100000),
-    ...overrides,
+    ...overrides
   });
 
   const createMockSession = (overrides: Partial<StudySessionRecord> = {}): StudySessionRecord => ({
@@ -33,14 +33,14 @@ describe('stats-service', () => {
     averageDifficulty: 2,
     sessionType: 'due',
     quitEarly: false,
-    ...overrides,
+    ...overrides
   });
 
   const mockLearningStreak: LearningStreak = {
     currentStreak: 5,
     longestStreak: 10,
     lastStudyDate: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-    studyDates: ['2024-12-27', '2024-12-28', '2024-12-29', '2024-12-30', '2024-12-31'],
+    studyDates: ['2024-12-27', '2024-12-28', '2024-12-29', '2024-12-30', '2024-12-31']
   };
 
   const mockAchievements: Achievement[] = [
@@ -51,8 +51,8 @@ describe('stats-service', () => {
       icon: '◎',
       category: 'cards',
       progress: { current: 1, required: 1, description: 'cards created' },
-      unlockedAt: new Date(),
-    },
+      unlockedAt: new Date()
+    }
   ];
 
   describe('getBasicStats', () => {
@@ -63,7 +63,7 @@ describe('stats-service', () => {
         dueCards: 0,
         totalReviews: 0,
         averageEasiness: 0,
-        distribution: { new: 0, learning: 0, young: 0, mature: 0 },
+        distribution: { new: 0, learning: 0, young: 0, mature: 0 }
       });
     });
 
@@ -71,7 +71,11 @@ describe('stats-service', () => {
       const cards = [
         createMockCard({ nextReview: new Date(now.getTime() + 100000), interval: 10 }), // Not due, young
         createMockCard({ nextReview: new Date(now.getTime() - 1000), interval: 0, repetitions: 5 }), // Due, new
-        createMockCard({ nextReview: new Date(now.getTime() - 5000), interval: 30, repetitions: 10 }), // Due, mature
+        createMockCard({
+          nextReview: new Date(now.getTime() - 5000),
+          interval: 30,
+          repetitions: 10
+        }) // Due, mature
       ];
       const stats = getBasicStats(cards);
 
@@ -88,12 +92,22 @@ describe('stats-service', () => {
       const cards = [
         createMockCard({ tags: ['js', 'web'] }),
         createMockCard({ tags: ['js', 'node'] }),
-        createMockCard({ tags: ['python'] }),
+        createMockCard({ tags: ['python'] })
       ];
       const sessionHistory = [
-        createMockSession({ startTime: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000), endTime: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000), cardsStudied: 5, correctAnswers: 4 }), // 30 min
-        createMockSession({ startTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), endTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000), cardsStudied: 10, correctAnswers: 9 }), // 30 min
-        createMockSession({ quitEarly: true }), // Should not count towards completed sessions
+        createMockSession({
+          startTime: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000),
+          endTime: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
+          cardsStudied: 5,
+          correctAnswers: 4
+        }), // 30 min
+        createMockSession({
+          startTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+          endTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
+          cardsStudied: 10,
+          correctAnswers: 9
+        }), // 30 min
+        createMockSession({ quitEarly: true }) // Should not count towards completed sessions
       ];
 
       const stats = getExtendedStats(cards, sessionHistory, mockLearningStreak, mockAchievements);
@@ -120,7 +134,9 @@ describe('stats-service', () => {
       expect(stats.sessionsCompleted).toBe(0);
       expect(stats.averageSessionLength).toBe(0);
       expect(stats.recentSessions).toHaveLength(0);
-      expect(stats.weeklyProgress.every(w => w.cardsStudied === 0 && w.sessionCount === 0)).toBe(true);
+      expect(stats.weeklyProgress.every(w => w.cardsStudied === 0 && w.sessionCount === 0)).toBe(
+        true
+      );
     });
 
     it('should handle empty cards for tag distribution', () => {

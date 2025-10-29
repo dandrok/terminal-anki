@@ -45,7 +45,6 @@ export const filterCards = (cards: Flashcard[], filters: FlashcardSearchFilters)
   return cards.filter(card => cardMatchesFilters(card, filters));
 };
 
-
 /**
  * Apply custom study session filters
  */

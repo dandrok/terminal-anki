@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Flashcard, StudySessionRecord, LearningStreak, Achievement, CustomStudyFilters } from '../domain';
+import {
+  Flashcard,
+  StudySessionRecord,
+  LearningStreak,
+  Achievement,
+  CustomStudyFilters
+} from '../domain';
 
 // Mock dependencies
 vi.mock('../utils/data-initializer');
@@ -26,7 +32,7 @@ import {
   updateCardTags,
   getCardsByTag,
   getCardsByDifficulty,
-  resetState,
+  resetState
 } from './flashcard-service';
 
 // Keep references to actual implementations for mocking
@@ -55,10 +61,13 @@ describe('flashcard-service', () => {
     nextReview: new Date(),
     lastReview: null,
     createdAt: new Date(),
-    ...overrides,
+    ...overrides
   });
 
-  const createMockSession = (id: string, overrides: Partial<StudySessionRecord> = {}): StudySessionRecord => ({
+  const createMockSession = (
+    id: string,
+    overrides: Partial<StudySessionRecord> = {}
+  ): StudySessionRecord => ({
     id,
     startTime: new Date(),
     endTime: new Date(),
@@ -68,7 +77,7 @@ describe('flashcard-service', () => {
     averageDifficulty: 2.5,
     sessionType: 'due',
     quitEarly: false,
-    ...overrides,
+    ...overrides
   });
 
   beforeEach(() => {
@@ -78,30 +87,47 @@ describe('flashcard-service', () => {
     mockCards = [
       createMockCard('1', { tags: ['js'], nextReview: new Date('2025-01-02T12:00:00.000Z') }), // Future date - not due
       createMockCard('2', { nextReview: new Date('2024-12-31T12:00:00.000Z'), tags: ['node'] }), // Past date - due
-      createMockCard('3', { tags: ['js', 'web'], nextReview: new Date('2025-01-02T12:00:00.000Z') }), // Future date - not due
+      createMockCard('3', { tags: ['js', 'web'], nextReview: new Date('2025-01-02T12:00:00.000Z') }) // Future date - not due
     ];
     mockSessionHistory = [createMockSession('s1')];
-    mockLearningStreak = { currentStreak: 1, longestStreak: 1, lastStudyDate: new Date(), studyDates: ['2025-01-01'] };
-    mockAchievements = [{
-      id: 'first_card', name: 'First Steps', description: '', icon: '', category: 'cards',
-      progress: { current: 0, required: 1, description: '' }
-    }];
+    mockLearningStreak = {
+      currentStreak: 1,
+      longestStreak: 1,
+      lastStudyDate: new Date(),
+      studyDates: ['2025-01-01']
+    };
+    mockAchievements = [
+      {
+        id: 'first_card',
+        name: 'First Steps',
+        description: '',
+        icon: '',
+        category: 'cards',
+        progress: { current: 0, required: 1, description: '' }
+      }
+    ];
 
     // Mock initializeFlashcardData to return our test state initially
-    vi.spyOn(dataInitializer, 'initializeFlashcardData').mockReturnValue({ 
+    vi.spyOn(dataInitializer, 'initializeFlashcardData').mockReturnValue({
       cards: mockCards,
       sessionHistory: mockSessionHistory,
       learningStreak: mockLearningStreak,
-      achievements: mockAchievements,
+      achievements: mockAchievements
     });
 
     (dataAdapters.saveFlashcardData as vi.Mock).mockReturnValue(undefined);
-    (spacedRepetitionService.updateSpacedRepetition as vi.Mock).mockImplementation((card) => ({ ...card, repetitions: card.repetitions + 1 }));
-    (achievementService.checkAchievements as vi.Mock).mockImplementation((ach) => ach);
-    (learningStreakService.updateLearningStreak as vi.Mock).mockImplementation((ls) => ls);
+    (spacedRepetitionService.updateSpacedRepetition as vi.Mock).mockImplementation(card => ({
+      ...card,
+      repetitions: card.repetitions + 1
+    }));
+    (achievementService.checkAchievements as vi.Mock).mockImplementation(ach => ach);
+    (learningStreakService.updateLearningStreak as vi.Mock).mockImplementation(ls => ls);
     (statsService.getBasicStats as vi.Mock).mockReturnValue({});
     (statsService.getExtendedStats as vi.Mock).mockReturnValue({});
-    (sessionService.recordStudySession as vi.Mock).mockImplementation((data) => ({ ...data, id: 'new-session-id' }));
+    (sessionService.recordStudySession as vi.Mock).mockImplementation(data => ({
+      ...data,
+      id: 'new-session-id'
+    }));
 
     // Call resetState immediately to set initial state after mocks are in place
     resetState();
@@ -217,7 +243,10 @@ describe('flashcard-service', () => {
   });
 
   it('recordAndProcessStudySession should record session, update streak, check achievements and save data', () => {
-    const sessionData: Omit<StudySessionRecord, 'id'> = createMockSession('new-session', { cardsStudied: 5, correctAnswers: 4 });
+    const sessionData: Omit<StudySessionRecord, 'id'> = createMockSession('new-session', {
+      cardsStudied: 5,
+      correctAnswers: 4
+    });
     const newSession = recordAndProcessStudySession(sessionData);
 
     expect(sessionService.recordStudySession).toHaveBeenCalledWith(sessionData);

@@ -5,7 +5,7 @@ import {
   parseJson,
   isValidJson,
   formatBackupTimestamp,
-  generateBackupFilename,
+  generateBackupFilename
 } from './json-operations';
 
 describe('json-operations', () => {
@@ -21,17 +21,17 @@ describe('json-operations', () => {
         repetitions: 0,
         nextReview: '2025-01-01T12:00:00.000Z',
         lastReview: null,
-        createdAt: '2025-01-01T10:00:00.000Z',
-      },
+        createdAt: '2025-01-01T10:00:00.000Z'
+      }
     ],
     sessionHistory: [],
     learningStreak: {
       currentStreak: 0,
       longestStreak: 0,
       lastStudyDate: null,
-      studyDates: [],
+      studyDates: []
     },
-    achievements: [],
+    achievements: []
   };
 
   describe('parseJsonWithDateRevival', () => {
@@ -74,9 +74,9 @@ describe('json-operations', () => {
             front: 'Q',
             back: 'A',
             nextReview: '2025-01-01T12:00:00.000Z',
-            createdAt: '2025-01-01T10:00:00.000Z',
-          },
-        ],
+            createdAt: '2025-01-01T10:00:00.000Z'
+          }
+        ]
       };
 
       const jsonString = JSON.stringify(incompleteData);
@@ -105,17 +105,17 @@ describe('json-operations', () => {
             repetitions: 0,
             nextReview: new Date('2025-01-01T12:00:00.000Z'),
             lastReview: null,
-            createdAt: new Date('2025-01-01T10:00:00.000Z'),
-          },
+            createdAt: new Date('2025-01-01T10:00:00.000Z')
+          }
         ],
         sessionHistory: [],
         learningStreak: {
           currentStreak: 0,
           longestStreak: 0,
           lastStudyDate: null,
-          studyDates: [],
+          studyDates: []
         },
-        achievements: [],
+        achievements: []
       };
 
       const result = serializeToJson(validatedData as any);
@@ -143,7 +143,7 @@ describe('json-operations', () => {
       const jsonString = '{"name": "test", "value": 42}';
       const validator = (data: unknown) => {
         if (typeof data === 'object' && data !== null && 'name' in data) {
-          return { ...data as any, validated: true };
+          return { ...(data as any), validated: true };
         }
         throw new Error('Invalid structure');
       };

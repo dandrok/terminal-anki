@@ -1,7 +1,6 @@
 import { Result, Ok, Err } from '../utils/result-type.js';
 import { safeValidateDataStore } from '../schemas/index.js';
 import { ValidatedDataStore } from '../schemas/session.schema.js';
-import { toDateString } from '../utils/date-utils.js';
 
 /**
  * Pure functions for JSON parsing and serialization

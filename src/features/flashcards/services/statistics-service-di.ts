@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   IStatisticsService,
   IDataRepository,
   ISpacedRepetitionService
 } from '../../../shared/interfaces/services.js';
-import { Result, Ok, Err } from '../../../shared/utils/result-type.js';
 
 /**
  * Statistics Service Implementation with Dependency Injection
@@ -63,7 +63,7 @@ export class StatisticsService implements IStatisticsService {
       }
 
       return stats;
-    } catch (error) {
+    } catch (_error) {
       // Return default stats on error
       return {
         totalCards: 0,
@@ -118,7 +118,7 @@ export class StatisticsService implements IStatisticsService {
         accuracyRate: Math.round(accuracyRate * 10) / 10,
         streakDays: learningStreak.currentStreak
       };
-    } catch (error) {
+    } catch (_error) {
       // Return default stats on error
       return {
         totalReviews: 0,
@@ -133,11 +133,13 @@ export class StatisticsService implements IStatisticsService {
   /**
    * Get tag distribution
    */
-  async getTagDistribution(): Promise<Array<{
-    tag: string;
-    count: number;
-    percentage: number;
-  }>> {
+  async getTagDistribution(): Promise<
+    Array<{
+      tag: string;
+      count: number;
+      percentage: number;
+    }>
+  > {
     try {
       const data = await this.dataRepository.loadData();
       const tagCounts: Record<string, number> = {};
@@ -159,7 +161,7 @@ export class StatisticsService implements IStatisticsService {
         count,
         percentage: (count / totalTags) * 100
       }));
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }
@@ -167,11 +169,13 @@ export class StatisticsService implements IStatisticsService {
   /**
    * Get progress over time
    */
-  async getProgressOverTime(days: number): Promise<Array<{
-    date: string;
-    cardsStudied: number;
-    accuracy: number;
-  }>> {
+  async getProgressOverTime(days: number): Promise<
+    Array<{
+      date: string;
+      cardsStudied: number;
+      accuracy: number;
+    }>
+  > {
     try {
       const data = await this.dataRepository.loadData();
       const { sessionHistory } = data;
@@ -206,7 +210,7 @@ export class StatisticsService implements IStatisticsService {
 
       // Sort by date
       return progress.sort((a, b) => a.date.localeCompare(b.date));
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }

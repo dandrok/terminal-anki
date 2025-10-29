@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { updateSpacedRepetition } from './spaced-repetition-service';
-import { Flashcard, ReviewQuality } from '../domain';
+import { Flashcard } from '../domain';
 
 describe('updateSpacedRepetition', () => {
   let card: Flashcard;
@@ -18,7 +18,7 @@ describe('updateSpacedRepetition', () => {
       repetitions: 0,
       nextReview: new Date(now.getTime() - 1000), // Due
       lastReview: null,
-      createdAt: new Date(now.getTime() - 100000),
+      createdAt: new Date(now.getTime() - 100000)
     };
   });
 

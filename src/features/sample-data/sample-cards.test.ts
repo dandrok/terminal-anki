@@ -10,7 +10,7 @@ import {
   validateSampleData,
   createTestCards,
   exportSampleDataAsJSON,
-  exportSampleDataAsCSV,
+  exportSampleDataAsCSV
 } from './sample-cards.js';
 import { Flashcard } from '../../shared/types/flashcard.types.js';
 
@@ -142,13 +142,17 @@ describe('Sample Data', () => {
     it('should return beginner cards', () => {
       const beginnerCards = getSampleCardsByDifficulty('beginner');
       expect(beginnerCards.length).toBe(2);
-      expect(beginnerCards.map(card => card.front)).toEqual(expect.arrayContaining(['Python', 'Algorithm']));
+      expect(beginnerCards.map(card => card.front)).toEqual(
+        expect.arrayContaining(['Python', 'Algorithm'])
+      );
     });
 
     it('should return intermediate cards', () => {
       const intermediateCards = getSampleCardsByDifficulty('intermediate');
       expect(intermediateCards.length).toBe(2);
-      expect(intermediateCards.map(card => card.front)).toEqual(expect.arrayContaining(['Database', 'API (Application Programming Interface)']));
+      expect(intermediateCards.map(card => card.front)).toEqual(
+        expect.arrayContaining(['Database', 'API (Application Programming Interface)'])
+      );
     });
 
     it('should return advanced cards', () => {
@@ -293,7 +297,9 @@ describe('Sample Data', () => {
       const lines = csv.split('\n');
 
       expect(lines.length).toBeGreaterThan(1); // Header + data rows
-      expect(lines[0]).toBe('ID,Front,Back,Tags,Easiness,Interval,Repetitions,Next Review,Last Review,Created At');
+      expect(lines[0]).toBe(
+        'ID,Front,Back,Tags,Easiness,Interval,Repetitions,Next Review,Last Review,Created At'
+      );
     });
 
     it('should have correct number of data rows', () => {

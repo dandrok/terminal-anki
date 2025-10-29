@@ -7,21 +7,16 @@ import {
   saveData,
   updateData,
   backupData,
-  restoreFromBackup,
   getDataStats,
   validateData,
-  clearAllData,
   exportData,
-  importData,
+  importData
 } from './data-storage-refactored';
 import { ValidatedDataStore } from '../../../shared/schemas/session.schema.js';
 
 describe('data-storage-refactored', () => {
   const testDir = path.join(tmpdir(), 'data-storage-test');
   const testDataFile = path.join(testDir, 'flashcards.json');
-
-  // Mock the DATA_FILE constant
-  const originalModulePath = path.join(__dirname, 'data-storage-refactored.ts');
 
   const mockDataStore: ValidatedDataStore = {
     cards: [
@@ -35,8 +30,8 @@ describe('data-storage-refactored', () => {
         repetitions: 0,
         nextReview: new Date('2025-01-01T12:00:00.000Z'),
         lastReview: null,
-        createdAt: new Date('2025-01-01T10:00:00.000Z'),
-      },
+        createdAt: new Date('2025-01-01T10:00:00.000Z')
+      }
     ],
     sessionHistory: [
       {
@@ -48,14 +43,14 @@ describe('data-storage-refactored', () => {
         incorrectAnswers: 1,
         averageDifficulty: 2.5,
         sessionType: 'due' as const,
-        quitEarly: false,
-      },
+        quitEarly: false
+      }
     ],
     learningStreak: {
       currentStreak: 3,
       longestStreak: 7,
       lastStudyDate: new Date('2025-01-01T12:00:00.000Z'),
-      studyDates: ['2025-01-01'],
+      studyDates: ['2025-01-01']
     },
     achievements: [
       {
@@ -67,12 +62,12 @@ describe('data-storage-refactored', () => {
         progress: {
           current: 1,
           required: 1,
-          description: 'Create your first flashcard',
+          description: 'Create your first flashcard'
         },
         unlockedAt: new Date('2025-01-01T12:00:00.000Z'),
-        unlockedBy: 'system',
-      },
-    ],
+        unlockedBy: 'system'
+      }
+    ]
   };
 
   beforeEach(async () => {
@@ -149,20 +144,23 @@ describe('data-storage-refactored', () => {
 
   describe('updateData', () => {
     it('should update data successfully', () => {
-      const result = updateData((data) => ({
+      const result = updateData(data => ({
         ...data,
-        cards: [...data.cards, {
-          id: 'new-card',
-          front: 'New Question',
-          back: 'New Answer',
-          tags: ['new'],
-          easiness: 2.5,
-          interval: 1,
-          repetitions: 0,
-          nextReview: new Date(),
-          lastReview: null,
-          createdAt: new Date(),
-        }],
+        cards: [
+          ...data.cards,
+          {
+            id: 'new-card',
+            front: 'New Question',
+            back: 'New Answer',
+            tags: ['new'],
+            easiness: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReview: null,
+            createdAt: new Date()
+          }
+        ]
       }));
 
       expect(result.success).toBe(true);

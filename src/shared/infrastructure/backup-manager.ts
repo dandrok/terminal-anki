@@ -63,10 +63,7 @@ export const generateCustomBackupPath = (originalPath: string, timestamp?: Date)
 /**
  * List backup files for a given file
  */
-export const listBackupFiles = (originalPath: string): string[] => {
-  const baseName = originalPath.replace('.json', '');
-  const pattern = `${baseName}.backup.*.json`;
-
+export const listBackupFiles = (_originalPath: string): string[] => {
   // This would require file system listing functionality
   // For now, return empty array - can be enhanced later
   return [];

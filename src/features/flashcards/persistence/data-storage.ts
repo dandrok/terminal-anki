@@ -5,7 +5,6 @@ import {
   Achievement
 } from '../../../shared/types/index.js';
 import { Result, Ok, Err } from '../../../shared/utils/result-type.js';
-import { toDateString } from '../../../shared/utils/date-utils.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

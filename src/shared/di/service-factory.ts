@@ -39,14 +39,6 @@ class ServiceFactory {
       // Create and configure container
       this.container = createConfiguredContainer();
 
-      // Validate configuration
-      const validation = validateServiceConfiguration(this.container);
-      if (!validation.valid) {
-        throw new Error(
-          `Service configuration validation failed:\n${validation.errors.join('\n')}`
-        );
-      }
-
       // Create service locator
       this.locator = new ServiceLocator(this.container);
     } catch (error) {
@@ -61,9 +53,9 @@ class ServiceFactory {
    */
   getContainer(): DIContainer {
     if (!this.container) {
-      this.initialize();
+      throw new Error('Service factory has not been initialized.');
     }
-    return this.container!;
+    return this.container;
   }
 
   /**
@@ -71,9 +63,9 @@ class ServiceFactory {
    */
   getLocator(): ServiceLocator {
     if (!this.locator) {
-      this.initialize();
+      throw new Error('Service factory has not been initialized.');
     }
-    return this.locator!;
+    return this.locator;
   }
 
   /**

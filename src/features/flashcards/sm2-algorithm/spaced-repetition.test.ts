@@ -8,7 +8,7 @@ import {
   predictNextInterval,
   getRecommendedSessionSize,
   calculateCardPriority,
-  sortCardsByPriority,
+  sortCardsByPriority
 } from './spaced-repetition.js';
 import { Flashcard } from '../../../shared/types/flashcard.types.js';
 import { addDays, subDays } from '../../../shared/utils/date-utils';
@@ -25,7 +25,7 @@ describe('SM-2 Spaced Repetition Algorithm', () => {
     nextReview: new Date(),
     lastReview: null,
     createdAt: new Date(),
-    ...overrides,
+    ...overrides
   });
 
   describe('calculateNextReview', () => {
@@ -217,24 +217,20 @@ describe('SM-2 Spaced Repetition Algorithm', () => {
   describe('calculateCardPriority', () => {
     it('should give higher priority to overdue cards', () => {
       const overdueCard = createMockCard({
-        nextReview: subDays(new Date(), 2),
+        nextReview: subDays(new Date(), 2)
       });
       const dueCard = createMockCard({
-        nextReview: new Date(),
+        nextReview: new Date()
       });
 
-      expect(calculateCardPriority(overdueCard)).toBeGreaterThan(
-        calculateCardPriority(dueCard)
-      );
+      expect(calculateCardPriority(overdueCard)).toBeGreaterThan(calculateCardPriority(dueCard));
     });
 
     it('should give priority to new cards', () => {
       const newCard = createMockCard({ interval: 1 });
       const matureCard = createMockCard({ interval: 45 });
 
-      expect(calculateCardPriority(newCard)).toBeGreaterThan(
-        calculateCardPriority(matureCard)
-      );
+      expect(calculateCardPriority(newCard)).toBeGreaterThan(calculateCardPriority(matureCard));
     });
   });
 
@@ -242,17 +238,17 @@ describe('SM-2 Spaced Repetition Algorithm', () => {
     it('should sort cards by priority in descending order', () => {
       const overdueCard = createMockCard({
         id: 'overdue',
-        nextReview: subDays(new Date(), 2),
+        nextReview: subDays(new Date(), 2)
       });
       const newCard = createMockCard({
         id: 'new',
         interval: 1,
-        nextReview: new Date(),
+        nextReview: new Date()
       });
       const matureCard = createMockCard({
         id: 'mature',
         interval: 45,
-        nextReview: addDays(new Date(), 5),
+        nextReview: addDays(new Date(), 5)
       });
 
       const sorted = sortCardsByPriority([matureCard, newCard, overdueCard]);

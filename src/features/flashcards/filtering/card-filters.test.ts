@@ -3,7 +3,6 @@ import {
   matchesSearchQuery,
   matchesTags,
   matchesDifficulty,
-  cardMatchesFilters,
   filterCards,
   searchCards,
   getDueCards,
@@ -17,7 +16,7 @@ import {
   getStaleCards,
   getUpcomingCards,
   getRecentlyStudiedCards,
-  advancedSearch,
+  advancedSearch
 } from './card-filters.js';
 import { Flashcard, CustomStudyFilters } from '../domain';
 import { addDays, subDays } from '../../../shared/utils/date-utils';
@@ -34,50 +33,51 @@ describe('Card Filters', () => {
     nextReview: new Date(),
     lastReview: subDays(new Date(), 2),
     createdAt: subDays(new Date(), 10),
-    ...overrides,
+    ...overrides
   });
 
-      const mockCards: Flashcard[] = [
-        createMockCard({
-          id: 'card-1',
-          front: 'What is React?',
-          back: 'A JavaScript library for building user interfaces',
-          tags: ['programming', 'react', 'javascript'],
-          easiness: 2.8,
-          interval: 15,
-          nextReview: addDays(new Date(), 3),
-        }),
-        createMockCard({
-          id: 'card-2',
-          front: 'What is Python?',
-          back: 'A high-level programming language',
-          tags: ['programming', 'python'],
-          easiness: 2.3,
-          interval: 2,
-          nextReview: subDays(new Date(), 1), // Overdue
-        }),
-        createMockCard({
-          id: 'card-3',
-          front: 'What is Node.js?',
-          back: 'A JavaScript runtime built on Chrome\'s V8 engine',
-          tags: ['programming', 'nodejs', 'javascript'],
-          easiness: 2.6,
-          interval: 8,
-          nextReview: new Date(), // Due today
-        }),
-        createMockCard({ // Added this card
-          id: 'card-4',
-          front: 'What is TypeScript?',
-          back: 'A typed superset of JavaScript',
-          tags: ['programming', 'typescript', 'javascript'],
-          easiness: 2.5,
-          interval: 5,
-          repetitions: 3,
-          nextReview: new Date(),
-          lastReview: subDays(new Date(), 2),
-          createdAt: subDays(new Date(), 10),
-        }),
-      ];
+  const mockCards: Flashcard[] = [
+    createMockCard({
+      id: 'card-1',
+      front: 'What is React?',
+      back: 'A JavaScript library for building user interfaces',
+      tags: ['programming', 'react', 'javascript'],
+      easiness: 2.8,
+      interval: 15,
+      nextReview: addDays(new Date(), 3)
+    }),
+    createMockCard({
+      id: 'card-2',
+      front: 'What is Python?',
+      back: 'A high-level programming language',
+      tags: ['programming', 'python'],
+      easiness: 2.3,
+      interval: 2,
+      nextReview: subDays(new Date(), 1) // Overdue
+    }),
+    createMockCard({
+      id: 'card-3',
+      front: 'What is Node.js?',
+      back: "A JavaScript runtime built on Chrome's V8 engine",
+      tags: ['programming', 'nodejs', 'javascript'],
+      easiness: 2.6,
+      interval: 8,
+      nextReview: new Date() // Due today
+    }),
+    createMockCard({
+      // Added this card
+      id: 'card-4',
+      front: 'What is TypeScript?',
+      back: 'A typed superset of JavaScript',
+      tags: ['programming', 'typescript', 'javascript'],
+      easiness: 2.5,
+      interval: 5,
+      repetitions: 3,
+      nextReview: new Date(),
+      lastReview: subDays(new Date(), 2),
+      createdAt: subDays(new Date(), 10)
+    })
+  ];
 
   describe('matchesSearchQuery', () => {
     it('should match cards by front text', () => {
@@ -167,7 +167,7 @@ describe('Card Filters', () => {
       const filters = {
         query: 'JavaScript',
         tags: ['programming'],
-        difficulty: 'young' as const,
+        difficulty: 'young' as const
       };
 
       const filtered = filterCards(mockCards, filters);
@@ -184,11 +184,14 @@ describe('Card Filters', () => {
     it('should search cards by text', () => {
       const results = searchCards(mockCards, 'JavaScript');
       expect(results.length).toBeGreaterThan(0);
-      expect(results.every(card =>
-        card.front.toLowerCase().includes('javascript') ||
-        card.back.toLowerCase().includes('javascript') ||
-        card.tags.some(tag => tag.toLowerCase().includes('javascript'))
-      )).toBe(true);
+      expect(
+        results.every(
+          card =>
+            card.front.toLowerCase().includes('javascript') ||
+            card.back.toLowerCase().includes('javascript') ||
+            card.tags.some(tag => tag.toLowerCase().includes('javascript'))
+        )
+      ).toBe(true);
     });
 
     it('should return all cards for empty query', () => {
@@ -220,9 +223,9 @@ describe('Card Filters', () => {
     it('should return cards with specified tags', () => {
       const javascriptCards = getCardsByTags(mockCards, ['javascript']);
       expect(javascriptCards.length).toBe(3);
-      expect(javascriptCards.every(card =>
-        card.tags.some(tag => tag.toLowerCase() === 'javascript')
-      )).toBe(true);
+      expect(
+        javascriptCards.every(card => card.tags.some(tag => tag.toLowerCase() === 'javascript'))
+      ).toBe(true);
     });
 
     it('should handle multiple tags with OR logic', () => {
@@ -246,7 +249,7 @@ describe('Card Filters', () => {
   describe('applyCustomStudyFilters', () => {
     it('should apply tag filters', () => {
       const filters: CustomStudyFilters = {
-        tags: ['javascript'],
+        tags: ['javascript']
       };
 
       const result = applyCustomStudyFilters(mockCards, filters);
@@ -258,7 +261,7 @@ describe('Card Filters', () => {
 
     it('should apply difficulty filters', () => {
       const filters: CustomStudyFilters = {
-        difficulty: 'young',
+        difficulty: 'young'
       };
 
       const result = applyCustomStudyFilters(mockCards, filters);
@@ -270,7 +273,7 @@ describe('Card Filters', () => {
 
     it('should apply limit filters', () => {
       const filters: CustomStudyFilters = {
-        limit: 2,
+        limit: 2
       };
 
       const result = applyCustomStudyFilters(mockCards, filters);
@@ -282,7 +285,7 @@ describe('Card Filters', () => {
 
     it('should randomize order when requested', () => {
       const filters: CustomStudyFilters = {
-        randomOrder: true,
+        randomOrder: true
       };
 
       const result1 = applyCustomStudyFilters(mockCards, filters);
@@ -293,8 +296,12 @@ describe('Card Filters', () => {
 
       if (result1.success && result2.success) {
         // Ensure the shuffled array contains the same elements
-        expect(result1.data.map(card => card.id).sort()).toEqual(mockCards.map(card => card.id).sort());
-        expect(result2.data.map(card => card.id).sort()).toEqual(mockCards.map(card => card.id).sort());
+        expect(result1.data.map(card => card.id).sort()).toEqual(
+          mockCards.map(card => card.id).sort()
+        );
+        expect(result2.data.map(card => card.id).sort()).toEqual(
+          mockCards.map(card => card.id).sort()
+        );
       }
     });
 
@@ -303,7 +310,7 @@ describe('Card Filters', () => {
         tags: ['javascript'],
         difficulty: 'young',
         limit: 1,
-        randomOrder: true,
+        randomOrder: true
       };
 
       const result = applyCustomStudyFilters(mockCards, filters);
@@ -383,12 +390,14 @@ describe('Card Filters', () => {
     it('should return cards not studied recently', () => {
       const staleCards = getStaleCards(mockCards, 1); // Not studied in last 1 day
       expect(staleCards.length).toBeGreaterThan(0);
-      expect(staleCards.every(card => {
-        const lastActivity = card.lastReview || card.createdAt;
-        const dayAgo = new Date();
-        dayAgo.setDate(dayAgo.getDate() - 1);
-        return lastActivity < dayAgo;
-      })).toBe(true);
+      expect(
+        staleCards.every(card => {
+          const lastActivity = card.lastReview || card.createdAt;
+          const dayAgo = new Date();
+          dayAgo.setDate(dayAgo.getDate() - 1);
+          return lastActivity < dayAgo;
+        })
+      ).toBe(true);
     });
   });
 
@@ -396,12 +405,14 @@ describe('Card Filters', () => {
     it('should return cards coming up soon', () => {
       const upcomingCards = getUpcomingCards(mockCards, 5); // Next 5 days
       expect(upcomingCards.length).toBeGreaterThan(0);
-      expect(upcomingCards.every(card => {
-        const now = new Date();
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + 5);
-        return card.nextReview >= now && card.nextReview <= futureDate;
-      })).toBe(true);
+      expect(
+        upcomingCards.every(card => {
+          const now = new Date();
+          const futureDate = new Date();
+          futureDate.setDate(futureDate.getDate() + 5);
+          return card.nextReview >= now && card.nextReview <= futureDate;
+        })
+      ).toBe(true);
     });
   });
 
@@ -409,12 +420,14 @@ describe('Card Filters', () => {
     it('should return cards studied recently', () => {
       const recentCards = getRecentlyStudiedCards(mockCards, 72); // Last 3 days
       expect(recentCards.length).toBeGreaterThan(0);
-      expect(recentCards.every(card => {
-        if (!card.lastReview) return false;
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setHours(threeDaysAgo.getHours() - 72);
-        return card.lastReview >= threeDaysAgo;
-      })).toBe(true);
+      expect(
+        recentCards.every(card => {
+          if (!card.lastReview) return false;
+          const threeDaysAgo = new Date();
+          threeDaysAgo.setHours(threeDaysAgo.getHours() - 72);
+          return card.lastReview >= threeDaysAgo;
+        })
+      ).toBe(true);
     });
   });
 
@@ -426,21 +439,24 @@ describe('Card Filters', () => {
         minEasiness: 2.5,
         maxEasiness: 3.0,
         minInterval: 1,
-        maxInterval: 20,
+        maxInterval: 20
       });
 
       expect(results.length).toBeGreaterThanOrEqual(0);
       if (results.length > 0) {
-        expect(results.every(card =>
-          (card.front.toLowerCase().includes('javascript') ||
-           card.back.toLowerCase().includes('javascript') ||
-           card.tags.some(tag => tag.toLowerCase().includes('javascript'))) &&
-          card.tags.some(tag => tag.toLowerCase() === 'programming') &&
-          card.easiness >= 2.5 &&
-          card.easiness <= 3.0 &&
-          card.interval >= 1 &&
-          card.interval <= 20
-        )).toBe(true);
+        expect(
+          results.every(
+            card =>
+              (card.front.toLowerCase().includes('javascript') ||
+                card.back.toLowerCase().includes('javascript') ||
+                card.tags.some(tag => tag.toLowerCase().includes('javascript'))) &&
+              card.tags.some(tag => tag.toLowerCase() === 'programming') &&
+              card.easiness >= 2.5 &&
+              card.easiness <= 3.0 &&
+              card.interval >= 1 &&
+              card.interval <= 20
+          )
+        ).toBe(true);
       }
     });
 
@@ -451,12 +467,12 @@ describe('Card Filters', () => {
 
       const results = advancedSearch(mockCards, {
         createdAfter: twoWeeksAgo,
-        createdBefore: weekAgo,
+        createdBefore: weekAgo
       });
 
-      expect(results.every(card =>
-        card.createdAt >= twoWeeksAgo && card.createdAt <= weekAgo
-      )).toBe(true);
+      expect(
+        results.every(card => card.createdAt >= twoWeeksAgo && card.createdAt <= weekAgo)
+      ).toBe(true);
     });
 
     it('should filter by last review date range', () => {
@@ -466,14 +482,14 @@ describe('Card Filters', () => {
 
       const results = advancedSearch(mockCards, {
         lastReviewAfter: threeDaysAgo,
-        lastReviewBefore: oneDayAgo,
+        lastReviewBefore: oneDayAgo
       });
 
-      expect(results.every(card =>
-        card.lastReview &&
-        card.lastReview >= threeDaysAgo &&
-        card.lastReview <= oneDayAgo
-      )).toBe(true);
+      expect(
+        results.every(
+          card => card.lastReview && card.lastReview >= threeDaysAgo && card.lastReview <= oneDayAgo
+        )
+      ).toBe(true);
     });
   });
 });

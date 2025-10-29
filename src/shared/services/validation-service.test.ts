@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { ValidationService } from './validation-service.js';
-import { Flashcard, CustomStudyFilters, ReviewQuality } from '../../features/flashcards/domain.js';
 
 describe('ValidationService', () => {
   let validationService: ValidationService;
@@ -21,7 +20,7 @@ describe('ValidationService', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       };
 
       const result = validationService.validateFlashcard(flashcard);
@@ -42,7 +41,7 @@ describe('ValidationService', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       };
 
       const result = validationService.validateFlashcard(flashcard);
@@ -63,7 +62,7 @@ describe('ValidationService', () => {
         repetitions: 0,
         nextReview: new Date(),
         lastReview: null,
-        createdAt: new Date(),
+        createdAt: new Date()
       };
 
       const result = validationService.validateFlashcard(flashcard);
@@ -101,7 +100,7 @@ describe('ValidationService', () => {
         difficulty: 'new' as const,
         includeDue: true,
         limit: 10,
-        randomOrder: false,
+        randomOrder: false
       };
 
       const result = validationService.validateCustomStudyFilters(filters);
@@ -113,7 +112,7 @@ describe('ValidationService', () => {
     it('should accept partial filters', () => {
       const filters = {
         query: 'test',
-        limit: 5,
+        limit: 5
       };
 
       const result = validationService.validateCustomStudyFilters(filters);
@@ -123,7 +122,7 @@ describe('ValidationService', () => {
 
     it('should reject invalid difficulty', () => {
       const filters = {
-        difficulty: 'invalid',
+        difficulty: 'invalid'
       };
 
       const result = validationService.validateCustomStudyFilters(filters);
@@ -133,7 +132,7 @@ describe('ValidationService', () => {
 
     it('should reject negative limit', () => {
       const filters = {
-        limit: -5,
+        limit: -5
       };
 
       const result = validationService.validateCustomStudyFilters(filters);
@@ -318,12 +317,11 @@ describe('ValidationService', () => {
     it('should validate all items in a batch', () => {
       const items = [
         { front: 'Question 1', back: 'Answer 1' },
-        { front: 'Question 2', back: 'Answer 2' },
+        { front: 'Question 2', back: 'Answer 2' }
       ];
 
-      const result = validationService.validateBatch(
-        items,
-        (item) => validationService.validateString(item.front, 1, 100)
+      const result = validationService.validateBatch(items, item =>
+        validationService.validateString(item.front, 1, 100)
       );
 
       expect(result.isValid).toBe(true);
@@ -334,12 +332,11 @@ describe('ValidationService', () => {
       const items = [
         { front: '', back: 'Answer 1' }, // Empty front
         { front: 'Question 2', back: 'Answer 2' },
-        { front: null, back: 'Answer 3' }, // Invalid front
+        { front: null, back: 'Answer 3' } // Invalid front
       ];
 
-      const result = validationService.validateBatch(
-        items,
-        (item) => validationService.validateString(item.front, 1, 100)
+      const result = validationService.validateBatch(items, item =>
+        validationService.validateString(item.front, 1, 100)
       );
 
       expect(result.isValid).toBe(false);

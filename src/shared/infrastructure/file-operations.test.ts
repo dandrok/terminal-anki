@@ -10,7 +10,7 @@ import {
   copyFile,
   deleteFile,
   getFileStats,
-  ensureDirectory,
+  ensureDirectory
 } from './file-operations';
 
 describe('file-operations', () => {
@@ -95,8 +95,8 @@ describe('file-operations', () => {
   describe('copyFile', () => {
     const destFile = path.join(testDir, 'dest.txt');
 
-    beforeEach(async () => {
-      await fs.writeFile(testFile, testContent);
+    beforeEach(() => {
+      fs.writeFileSync(testFile, testContent);
     });
 
     it('should copy file successfully', () => {
@@ -117,8 +117,8 @@ describe('file-operations', () => {
   });
 
   describe('deleteFile', () => {
-    beforeEach(async () => {
-      await fs.writeFile(testFile, testContent);
+    beforeEach(() => {
+      fs.writeFileSync(testFile, testContent);
     });
 
     it('should delete file successfully', () => {
@@ -139,8 +139,8 @@ describe('file-operations', () => {
   });
 
   describe('getFileStats', () => {
-    beforeEach(async () => {
-      await fs.writeFile(testFile, testContent);
+    beforeEach(() => {
+      fs.writeFileSync(testFile, testContent);
     });
 
     it('should get file stats successfully', () => {

@@ -9,11 +9,9 @@ import {
   ReviewQuality,
   StudySessionRecord,
   LearningStreak,
-  Achievement,
-  ExtendedStats
+  Achievement
 } from '../../features/flashcards/domain/index.js';
 export { ReviewQuality };
-import { Result } from '../utils/result-type.js';
 
 /**
  * Data repository interface for persistence operations
@@ -57,6 +55,11 @@ export interface IValidationService {
     data?: StudySessionRecord;
     errors: string[];
   };
+  validateSessionData(data: unknown): {
+    isValid: boolean;
+    data?: Omit<StudySessionRecord, 'id'>;
+    errors: string[];
+  };
   validateLearningStreak(data: unknown): {
     isValid: boolean;
     data?: LearningStreak;
@@ -67,17 +70,29 @@ export interface IValidationService {
     data?: Achievement;
     errors: string[];
   };
-  validateString(value: unknown, minLength?: number, maxLength?: number): {
+  validateString(
+    value: unknown,
+    minLength?: number,
+    maxLength?: number
+  ): {
     isValid: boolean;
     data?: string;
     errors: string[];
   };
-  validateStringArray(value: unknown, maxLength?: number, itemLength?: number): {
+  validateStringArray(
+    value: unknown,
+    maxLength?: number,
+    itemLength?: number
+  ): {
     isValid: boolean;
     data?: string[];
     errors: string[];
   };
-  validateNumber(value: unknown, min?: number, max?: number): {
+  validateNumber(
+    value: unknown,
+    min?: number,
+    max?: number
+  ): {
     isValid: boolean;
     data?: number;
     errors: string[];
@@ -93,7 +108,10 @@ export interface IValidationService {
  * Spaced repetition service interface
  */
 export interface ISpacedRepetitionService {
-  calculateNextReview(card: Flashcard, quality: ReviewQuality): {
+  calculateNextReview(
+    card: Flashcard,
+    quality: ReviewQuality
+  ): {
     easiness: number;
     interval: number;
     repetitions: number;
@@ -109,7 +127,14 @@ export interface ISpacedRepetitionService {
 export interface IAchievementService {
   checkAchievements(
     session: StudySessionRecord,
-    stats: { total: number; due: number; new: number; learning: number; young: number; mature: number }
+    stats: {
+      total: number;
+      due: number;
+      new: number;
+      learning: number;
+      young: number;
+      mature: number;
+    }
   ): Achievement[];
   updateAchievement(id: string, achievement: Achievement): void;
   getAchievements(): Achievement[];
@@ -176,9 +201,7 @@ export interface IFlashcardService {
   getCardsByTag(tag: string): Flashcard[];
   getCardsByDifficulty(difficulty: 'new' | 'learning' | 'young' | 'mature'): Flashcard[];
   updateCardTags(cardId: string, tags: string[]): boolean;
-  recordStudySession(
-    sessionData: Omit<StudySessionRecord, 'id'>
-  ): Promise<StudySessionRecord>;
+  recordStudySession(sessionData: Omit<StudySessionRecord, 'id'>): Promise<StudySessionRecord>;
   loadState?(): Promise<void>;
   saveState?(): Promise<void>;
 }
@@ -202,16 +225,20 @@ export interface IStatisticsService {
     accuracyRate: number;
     streakDays: number;
   }>;
-  getTagDistribution(): Promise<Array<{
-    tag: string;
-    count: number;
-    percentage: number;
-  }>>;
-  getProgressOverTime(days: number): Promise<Array<{
-    date: string;
-    cardsStudied: number;
-    accuracy: number;
-  }>>;
+  getTagDistribution(): Promise<
+    Array<{
+      tag: string;
+      count: number;
+      percentage: number;
+    }>
+  >;
+  getProgressOverTime(days: number): Promise<
+    Array<{
+      date: string;
+      cardsStudied: number;
+      accuracy: number;
+    }>
+  >;
 }
 
 /**
@@ -227,11 +254,7 @@ export interface IFilterService {
       includeDue?: boolean;
     }
   ): Flashcard[];
-  sortCards(
-    cards: Flashcard[],
-    sortBy: string,
-    order: 'asc' | 'desc'
-  ): Flashcard[];
+  sortCards(cards: Flashcard[], sortBy: string, order: 'asc' | 'desc'): Flashcard[];
   getUniqueTags(cards: Flashcard[]): string[];
   getTagDistribution(cards: Flashcard[]): Array<{
     tag: string;

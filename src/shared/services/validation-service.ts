@@ -42,6 +42,25 @@ export class ValidationService implements IValidationService {
     };
   }
 
+  validateSessionData(data: unknown): {
+    isValid: boolean;
+    data?: Omit<StudySessionRecord, 'id'>;
+    errors: string[];
+  } {
+    const result = StudySessionRecordSchema.omit({ id: true }).safeParse(data);
+    if (result.success) {
+      return {
+        isValid: true,
+        data: result.data as Omit<StudySessionRecord, 'id'>,
+        errors: []
+      };
+    }
+    return {
+      isValid: false,
+      errors: result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    };
+  }
+
   /**
    * Validate custom study filters
    */

@@ -14,10 +14,7 @@ import {
   ILearningStreakService,
   ISessionService
 } from '../../../shared/interfaces/services.js';
-import { Result, Ok, Err } from '../../../shared/utils/result-type.js';
 import { matchesSearchQuery, filterCards } from '../filtering';
-import { getCardsByDifficulty, getDueCards } from '../filtering';
-import { calculateNextReview } from '../sm2-algorithm/spaced-repetition';
 
 /**
  * Flashcard Service Implementation with Dependency Injection
@@ -192,16 +189,14 @@ export class FlashcardService implements IFlashcardService {
   async recordStudySession(
     sessionData: Omit<StudySessionRecord, 'id'>
   ): Promise<StudySessionRecord> {
-    const session = this.sessionService.createSession(
-      sessionData.sessionType as any
-    );
+    const session = this.sessionService.createSession(sessionData.sessionType as any);
 
     const completeSession: StudySessionRecord = {
       ...sessionData,
       id: session.id,
       startTime: session.startTime,
       endTime: new Date(),
-      duration: (sessionData.endTime || new Date()).getTime() - session.startTime.getTime(),
+      duration: (sessionData.endTime || new Date()).getTime() - session.startTime.getTime()
     };
 
     this.state.sessionHistory.push(completeSession);

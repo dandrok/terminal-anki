@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 import { loadFlashcardData, createSampleCards, saveFlashcardData } from '../adapters';
 import { Flashcard, StudySessionRecord, LearningStreak, Achievement } from '../domain';
 
