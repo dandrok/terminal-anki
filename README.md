@@ -104,19 +104,10 @@
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd terminal-anki
+# Install globally via npm
+npm install -g terminal-anki
 
-# Install dependencies
-npm install
-
-# Build the application
-npm run build
-
-# Make executable and install globally
-chmod +x dist/index.js
-npm link
+# That's it! The `anki` command is now available globally.
 ```
 
 ## 🎮 Using the CLI
@@ -401,6 +392,26 @@ async function syncWithBackend(cards: Flashcard[]) {
 ---
 
 ## 🛠️ Development
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/dandrok/terminal-anki.git
+cd terminal-anki
+
+# Install dependencies
+npm install
+
+# Build the application
+npm run build
+
+# Run in development mode
+npm run dev
+
+# Install globally for testing
+npm link
+```
 
 ### Project Structure
 
