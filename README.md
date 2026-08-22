@@ -354,7 +354,8 @@ and "no import cycles".
 with coverage), `build` (compile, smoke-test the CLI, check the packed contents and the bin's
 executable bit) and `audit`. Ubuntu only; macOS and Windows are not covered.
 
-Releases are documented in [RELEASING.md](RELEASING.md).
+Releases are documented in [RELEASING.md](RELEASING.md), and what changed in each one is in
+[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
