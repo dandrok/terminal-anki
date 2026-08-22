@@ -585,9 +585,35 @@ All three jobs run on `ubuntu-latest` with Node 24, the project's minimum
 supported version. macOS and Windows are not covered.
 
 `.github/workflows/release.yml` runs on a `v*.*.*` tag: it re-runs the full check
-suite, verifies the tag matches `package.json`, then publishes to npm with
-provenance. Publishing requires an `NPM_TOKEN` secret and an `npm-publish`
-environment on the repository.
+suite, verifies the tag matches `package.json`, then publishes to npm.
+
+Publishing uses **npm trusted publishing (OIDC)** — there is no `NPM_TOKEN` and no
+repository secret. npm trusts this workflow directly, GitHub mints a short-lived
+credential for each run, and provenance is attested automatically.
+
+Configure it once on npmjs.com under the package's **Trusted Publisher** settings:
+
+| Field                | Value                              |
+| -------------------- | ---------------------------------- |
+| Organization or user | `dandrok`                          |
+| Repository           | `terminal-anki`                    |
+| Workflow filename    | `release.yml` (filename, not path) |
+| Allowed actions      | `npm publish`                      |
+| Environment name     | `npm-publish`                      |
+
+The environment name must match the `environment:` key on the workflow's `publish`
+job. Create that environment under the repository's **Settings → Environments** to
+add a required reviewer, so no release publishes without approval.
+
+To release: merge to `main`, then tag and push.
+
+```bash
+git tag v$(node -p "require('./package.json').version")
+git push origin --tags
+```
+
+Triggering the workflow manually from the Actions tab runs only the `verify` job —
+the `publish` job is gated on a `v*` tag ref and cannot fire from a branch.
 
 ### CLI Options
 

@@ -69,18 +69,22 @@ jobs:
         with:
           persist-credentials: false
 
+      # No dependency cache in this job. It holds `id-token: write`, so a
+      # poisoned cache entry would execute where a publish can be triggered.
+      # `package-manager-cache` defaults to true, so it must be disabled
+      # explicitly -- omitting `cache` alone still caches.
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
-      # Trusted publishing needs npm 11.5.1 or newer. Node 24 already ships a
-      # recent 11.x, but pinning the client here keeps the job independent of
-      # whatever npm happens to be bundled.
-      - name: Update npm
-        run: npm install -g npm@latest
+      # Trusted publishing needs npm 11.5.1 or newer. Pinned rather than
+      # `@latest`: this job can publish, so the npm client it runs should be an
+      # explicit, reviewable choice rather than whatever shipped today.
+      - name: Install the pinned npm client
+        run: npm install -g npm@11.19.0
 
       - name: Install dependencies
         run: npm ci
