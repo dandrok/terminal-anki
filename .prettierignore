@@ -1,4 +1,5 @@
 node_modules
 dist
-*.json
-*.md
+coverage
+package-lock.json
+CHANGELOG.md
