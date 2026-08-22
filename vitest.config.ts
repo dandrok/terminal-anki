@@ -8,6 +8,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: [
+        'src/config/**',
         'src/core/**',
         'src/storage/**',
         'src/state/**',

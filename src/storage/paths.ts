@@ -5,6 +5,15 @@ import { fileURLToPath } from 'node:url';
 export const DATA_FILE_NAME = 'flashcards.json';
 
 /**
+ * Settings live beside the cards but in their own file.
+ *
+ * Separate because the two have different write cadence and, more importantly,
+ * different blast radius: a settings file mangled by hand must never be able to
+ * take the collection down with it.
+ */
+export const CONFIG_FILE_NAME = 'config.json';
+
+/**
  * Directory the application stores its data in.
  *
  * Resolution order: an explicit `TERMINAL_ANKI_DATA_DIR`, then
@@ -26,6 +35,10 @@ export function resolveDataDir(env: NodeJS.ProcessEnv = process.env): string {
 
 export function resolveDataFile(env: NodeJS.ProcessEnv = process.env): string {
   return path.join(resolveDataDir(env), DATA_FILE_NAME);
+}
+
+export function resolveConfigFile(env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(resolveDataDir(env), CONFIG_FILE_NAME);
 }
 
 /**

@@ -3,6 +3,7 @@ import { MainMenu } from './screens/MainMenu.js';
 import { QuickStats } from './screens/QuickStats.js';
 import { Achievements } from './screens/Achievements.js';
 import { Analytics } from './screens/Analytics.js';
+import { Settings } from './screens/Settings.js';
 import { StudyFlow } from './screens/StudyFlow.js';
 import { Browse } from './screens/Browse.js';
 import { CardForm } from './screens/CardForm.js';
@@ -37,6 +38,7 @@ export function Router({ screen, onNavigate, onQuit, editing, onEdit }: RouterPr
     stats: () => <QuickStats onBack={toMenu} onQuit={onQuit} />,
     achievements: () => <Achievements onBack={toMenu} onQuit={onQuit} />,
     analytics: () => <Analytics onBack={toMenu} onQuit={onQuit} />,
+    settings: () => <Settings onBack={toMenu} />,
     study: () => <StudyFlow onExit={toMenu} onQuit={onQuit} />,
     'custom-study': () => <StudyFlow onExit={toMenu} onQuit={onQuit} mode="custom" />,
 

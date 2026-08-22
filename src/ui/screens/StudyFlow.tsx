@@ -10,6 +10,7 @@ import { useHelp } from '../hooks/useHelp.js';
 import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState, useDispatch } from '../hooks/useStore.js';
+import { useConfig } from '../hooks/useConfig.js';
 import { selectAllTags, selectDueCards, selectFilteredCards } from '../../state/selectors.js';
 import { shuffle } from '../../core/filters.js';
 import type { CustomStudyFilters, Flashcard, SessionType } from '../../types/index.js';
@@ -50,6 +51,7 @@ export interface StudyFlowProps {
 export function StudyFlow({ onExit, onQuit, mode = 'due' }: StudyFlowProps) {
   const state = useAppState();
   const dispatch = useDispatch();
+  const config = useConfig();
   const [phase, setPhase] = useState<Phase>({ name: 'setup' });
   const [filters, setFilters] = useState<CustomStudyFilters | undefined>(undefined);
 
@@ -117,7 +119,8 @@ export function StudyFlow({ onExit, onQuit, mode = 'due' }: StudyFlowProps) {
           onQuit={onQuit}
           onCancel={onExit}
           onStart={length => {
-            setPhase({ name: 'studying', cards: shuffle(due).slice(0, length) });
+            const ordered = config.shuffle ? shuffle(due) : due;
+            setPhase({ name: 'studying', cards: ordered.slice(0, length) });
           }}
         />
       );

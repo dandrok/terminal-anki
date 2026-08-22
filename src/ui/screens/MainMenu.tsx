@@ -17,6 +17,7 @@ const ITEMS: SelectItem<Screen>[] = [
   { value: 'achievements', label: '◑ Achievements' },
   { value: 'analytics', label: '◰ Analytics & history' },
   { value: 'stats', label: '◈ Quick stats' },
+  { value: 'settings', label: '⚙ Settings', hint: 'theme · goals · defaults' },
   { value: 'exit', label: '◐ Exit' }
 ];
 

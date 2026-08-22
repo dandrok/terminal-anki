@@ -24,7 +24,15 @@ const SCREENS: [string, readonly Control[]][] = [
   ['study answer', screenControls([{ key: '1-5', label: 'grade', description: 'x' }])],
   ['study setup', screenControls([MOVE_CONTROL, SELECT_CONTROL])],
   ['session summary', screenControls([{ key: '⏎', label: 'menu', description: 'x' }])],
-  ['analytics', screenControls([{ key: '←→/hl', label: 'view', description: 'x' }])]
+  ['analytics', screenControls([{ key: '←→/hl', label: 'view', description: 'x' }])],
+  [
+    'settings',
+    screenControls([
+      { key: '↑↓/jk', label: 'field', description: 'x' },
+      { key: '←→/hl', label: 'change', description: 'x' },
+      { key: '⏎', label: 'save', description: 'x' }
+    ])
+  ]
 ];
 
 const ROOT_SCREENS = new Set(['menu']);

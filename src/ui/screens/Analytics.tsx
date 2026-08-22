@@ -9,12 +9,13 @@ import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState } from '../hooks/useStore.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
+import { useConfig } from '../hooks/useConfig.js';
 import {
   selectAccuracyTrend,
   selectDailyCardCounts,
   selectExtendedStats
 } from '../../state/selectors.js';
-import { buildHeatmap, DEFAULT_DAILY_GOAL, HEATMAP_WEEKS } from '../charts/heatmap.js';
+import { buildHeatmap } from '../charts/heatmap.js';
 import { sparkline } from '../charts/sparkline.js';
 import { toDateKey } from '../../core/dates.js';
 import { sessionAccuracy } from '../../core/stats.js';
@@ -49,6 +50,7 @@ export function Analytics({ onBack, onQuit }: AnalyticsProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
   const { columns, isNarrow } = useTerminalSize();
+  const config = useConfig();
   const state = useAppState();
   const stats = selectExtendedStats(state);
 
@@ -74,10 +76,11 @@ export function Analytics({ onBack, onQuit }: AnalyticsProps) {
   });
 
   const now = new Date();
-  // A 15-week grid is 30 columns of cells plus the weekday gutter; halve the
-  // span rather than let it wrap into an unreadable second block.
-  const weeks = isNarrow ? Math.floor(HEATMAP_WEEKS / 2) : HEATMAP_WEEKS;
-  const grid = buildHeatmap(selectDailyCardCounts(state), { now, weeks });
+  // Each week is two columns plus the weekday gutter, so a full span does not
+  // fit a narrow terminal; halve it rather than let it wrap into an unreadable
+  // second block.
+  const weeks = isNarrow ? Math.max(4, Math.floor(config.heatmapWeeks / 2)) : config.heatmapWeeks;
+  const grid = buildHeatmap(selectDailyCardCounts(state), { now, weeks, goal: config.dailyGoal });
   const trend = selectAccuracyTrend(state);
   const barWidth = Math.max(20, Math.min(columns - 12, 44));
 
@@ -101,7 +104,7 @@ export function Analytics({ onBack, onQuit }: AnalyticsProps) {
       <Box flexDirection="column">
         <Heatmap grid={grid} theme={theme} today={toDateKey(now)} />
         <Box marginTop={1}>
-          <HeatmapLegend theme={theme} goal={DEFAULT_DAILY_GOAL} />
+          <HeatmapLegend theme={theme} goal={config.dailyGoal} />
         </Box>
         <Box marginTop={1} flexDirection="column">
           <Text color={theme.muted}>

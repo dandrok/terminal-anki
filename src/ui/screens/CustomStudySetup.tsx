@@ -5,6 +5,7 @@ import { screenControls, type Control } from '../controls.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useTheme } from '../hooks/useTheme.js';
+import { useConfig } from '../hooks/useConfig.js';
 import { plural } from '../format.js';
 import type { CustomStudyFilters, DifficultyLevel } from '../../types/index.js';
 
@@ -43,6 +44,7 @@ export function CustomStudySetup({
   onCancel
 }: CustomStudySetupProps) {
   const theme = useTheme();
+  const config = useConfig();
   const { isHelpOpen, toggleHelp } = useHelp();
 
   const [fieldIndex, setFieldIndex] = useState(0);
@@ -51,7 +53,7 @@ export function CustomStudySetup({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [difficultyIndex, setDifficultyIndex] = useState(0);
   const [limitIndex, setLimitIndex] = useState(0);
-  const [randomOrder, setRandomOrder] = useState(true);
+  const [randomOrder, setRandomOrder] = useState(config.shuffle);
 
   /**
    * Which row and tag the keys are acting on, mid-chunk.

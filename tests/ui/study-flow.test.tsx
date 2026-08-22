@@ -8,7 +8,14 @@ import { selectCards, selectDueCards } from '../../src/state/selectors.js';
 import type { Repository } from '../../src/storage/repository.js';
 import { withRender } from './render.js';
 
-const NOW = new Date(2026, 7, 22, 12, 0);
+/**
+ * The real clock, not a fixture date.
+ *
+ * `selectDueCards` reads `new Date()`, so grading against a hard-coded day
+ * schedules the cards to a date that eventually falls into the past and the
+ * "nothing is due" premise quietly stops holding.
+ */
+const NOW = new Date();
 const RETURN = String.fromCharCode(13);
 
 function inStore(store: Store, node: ReactElement): ReactElement {

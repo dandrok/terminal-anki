@@ -6,6 +6,7 @@ import { MOVE_CONTROL, screenControls, type Control } from '../controls.js';
 import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
+import { useConfig } from '../hooks/useConfig.js';
 
 /** `null` means the learner backed out. */
 export type SessionLength = number | null;
@@ -37,7 +38,7 @@ export interface StudySetupProps {
 export function StudySetup({ dueCount, onStart, onCancel, onQuit }: StudySetupProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
-  const [index, setIndex] = useState(0);
+  const config = useConfig();
   const [custom, setCustom] = useState<number | null>(null);
 
   const items: SelectItem<number>[] = [
@@ -48,6 +49,14 @@ export function StudySetup({ dueCount, onStart, onCancel, onQuit }: StudySetupPr
     })),
     { value: CUSTOM, label: 'Custom number…' }
   ];
+
+  // Start on the size chosen in settings, when it is on offer today. Falling
+  // back to the first row keeps a preference for 50 from selecting nothing on a
+  // day with 12 cards due.
+  const [index, setIndex] = useState(() => {
+    const preferred = items.findIndex(item => item.value === config.defaultSessionLength);
+    return preferred > 0 ? preferred : 0;
+  });
 
   const inCustom = custom !== null;
 

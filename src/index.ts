@@ -15,7 +15,9 @@ export type { AppAction, UndoEntry } from './state/actions.js';
 export * as selectors from './state/selectors.js';
 
 export { createRepository, type Repository } from './storage/repository.js';
-export { resolveDataDir, resolveDataFile } from './storage/paths.js';
+export { createConfigStore, type ConfigStore } from './storage/config-store.js';
+export { resolveDataDir, resolveDataFile, resolveConfigFile } from './storage/paths.js';
+export { DEFAULT_CONFIG, normalizeConfig, withConfig, type AppConfig } from './config/schema.js';
 
 export * as sm2 from './core/sm2.js';
 export * as filters from './core/filters.js';

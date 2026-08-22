@@ -1,5 +1,6 @@
 import { render } from 'ink';
 import { App } from './App.js';
+import { createConfigStore } from '../storage/config-store.js';
 import type { Store } from '../state/store.js';
 import type { Screen } from './screens/Screen.js';
 
@@ -12,7 +13,16 @@ import type { Screen } from './screens/Screen.js';
  * within one process.
  */
 export async function start(store: Store, initialScreen: Screen = 'menu'): Promise<void> {
-  const instance = render(<App store={store} initialScreen={initialScreen} />);
+  // Read once, before the first frame, so the chosen theme is what paints it.
+  const configStore = createConfigStore();
+  const instance = render(
+    <App
+      store={store}
+      configStore={configStore}
+      initialConfig={configStore.load()}
+      initialScreen={initialScreen}
+    />
+  );
   await instance.waitUntilExit();
   instance.clear();
 }

@@ -10,4 +10,5 @@ export type Screen =
   | 'achievements'
   | 'analytics'
   | 'stats'
+  | 'settings'
   | 'exit';
