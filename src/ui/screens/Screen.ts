@@ -14,7 +14,6 @@ export type Screen =
 
 /** Screens still served by the pre-Ink flow during the phased rewrite. */
 export const LEGACY_SCREENS: readonly Screen[] = [
-  'study',
   'custom-study',
   'add',
   'browse',

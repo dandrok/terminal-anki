@@ -3,6 +3,7 @@ import { MainMenu } from './screens/MainMenu.js';
 import { QuickStats } from './screens/QuickStats.js';
 import { Achievements } from './screens/Achievements.js';
 import { Analytics } from './screens/Analytics.js';
+import { StudyFlow } from './screens/StudyFlow.js';
 import type { Screen } from './screens/Screen.js';
 
 export interface RouterProps {
@@ -26,9 +27,9 @@ export function Router({ screen, onNavigate }: RouterProps): ReactNode {
     stats: () => <QuickStats onBack={toMenu} />,
     achievements: () => <Achievements onBack={toMenu} />,
     analytics: () => <Analytics onBack={toMenu} />,
+    study: () => <StudyFlow onExit={toMenu} />,
 
     // Handed to the pre-Ink flow by App; never rendered.
-    study: () => null,
     'custom-study': () => null,
     add: () => null,
     browse: () => null,
