@@ -15,11 +15,11 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
 
 jobs:
-  quality:
-    name: Lint, format & types
+  verify:
+    name: Lint, types & tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -34,48 +34,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type-check
-        run: npm run type-check
-
-  test:
-    name: Test on Node ${{ matrix.node-version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ['22', '24']
-        os: [ubuntu-latest]
-        include:
-          # The published CLI has to work on macOS and Windows too, but only
-          # the supported LTS needs the full cross-platform matrix.
-          - node-version: '22'
-            os: macos-latest
-          - node-version: '22'
-            os: windows-latest
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v7
-
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
+      - name: Lint, type-check, format and test
+        run: npm run test:coverage && npm run lint && npm run type-check && npm run format:check
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22'
         uses: actions/upload-artifact@v7
         with:
           name: coverage

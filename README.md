@@ -7,7 +7,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square)
+![Node.js](https://img.shields.io/badge/node-%3E%3D24-339933?style=flat-square)
 
 **Learn efficiently with the proven SM-2 spaced repetition algorithm - the same algorithm used by Anki!**
 
@@ -112,7 +112,7 @@
 
 ### Requirements
 
-- **Node.js 22 or newer**
+- **Node.js 24 or newer**
 
 ### Installation
 
