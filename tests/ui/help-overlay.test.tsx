@@ -73,7 +73,7 @@ describe('help overlay', () => {
     });
   });
 
-  it.each(SCREENS.slice(0, 3))(
+  it.each(SCREENS)(
     '%s closes the overlay with q without also leaving the screen',
     async (_name, build) => {
       // One q, one effect. Closing help and stepping back out of the screen on

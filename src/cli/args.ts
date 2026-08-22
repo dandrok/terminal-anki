@@ -29,7 +29,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
 
 export function helpText(version: string): string {
   return `
-Terminal Anki v${version} - Enhanced Flashcard Learning System
+Terminal Anki v${version} - flashcards with spaced repetition, in your terminal
 
 Usage:
   anki                  Start interactive mode
@@ -37,18 +37,17 @@ Usage:
   anki --version, -v    Print the version
   anki --help, -h       Show this help message
 
+Keys:
+  Two keystrokes per card: space reveals the answer, then 1-5 grades it
+  (Again / Hard / Good / Easy / Perfect). u undoes the last grade.
+  q or esc leaves whatever you are in; ? shows every key on the screen.
+
 Environment:
-  TERMINAL_ANKI_DATA_DIR   Override where flashcards.json is stored
+  TERMINAL_ANKI_DATA_DIR   Directory for flashcards.json and config.json
   XDG_DATA_HOME            Used when the override is unset
 
-Features:
-  ◎ Custom study sessions (by tags, difficulty, due state, limits)
-  ◈ Tag system for flashcards
-  ◈ Learning streaks tracking
-  ◑ Achievement system
-  ◰ Enhanced analytics dashboard
-  ◴ Study session history
-  ◎ Spaced repetition learning (SM-2 algorithm)
-  ◈ Local data storage with full history
+Data:
+  flashcards.json   Cards, session history, streaks, achievements
+  config.json       Theme, daily goal, session defaults
 `;
 }

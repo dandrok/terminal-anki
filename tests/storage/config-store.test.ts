@@ -86,6 +86,27 @@ describe('createConfigStore', () => {
     expect(onWarning).toHaveBeenCalledOnce();
   });
 
+  it('does not throw when even the cleanup fails', () => {
+    // A directory sitting on the temp path: the write fails with EISDIR, and
+    // then removing it fails too. Losing a colour scheme must not take the
+    // application down with it.
+    fs.mkdirSync(path.join(workspace, `.config.json.${process.pid}.tmp`));
+    fs.mkdirSync(path.join(workspace, `.config.json.${process.pid}.tmp`, 'child'));
+    const onWarning = vi.fn();
+
+    expect(() => createConfigStore({ configFile, onWarning }).save(DEFAULT_CONFIG)).not.toThrow();
+    expect(onWarning).toHaveBeenCalledOnce();
+  });
+
+  it('does not throw when the warning handler itself throws', () => {
+    fs.writeFileSync(configFile, 'nonsense');
+    const onWarning = vi.fn(() => {
+      throw new Error('handler blew up');
+    });
+
+    expect(() => createConfigStore({ configFile, onWarning }).load()).not.toThrow();
+  });
+
   it('is silent unless a warning handler asks to hear about it', () => {
     // A stray console.warn mid-render tears a hole in the Ink frame.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

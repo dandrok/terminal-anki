@@ -34,7 +34,31 @@ export function createConfigStore(options: ConfigStoreOptions = {}): ConfigStore
   const configFile = options.configFile ?? resolveConfigFile();
   // Silent by default: a warning printed into a running Ink render corrupts
   // the frame, and the caller has nothing useful to do about a settings file.
-  const onWarning = options.onWarning ?? noop;
+  const handler = options.onWarning ?? noop;
+
+  /**
+   * Report a problem, and never let the reporting become the problem.
+   *
+   * This is only ever called from a failure path, so a handler that throws
+   * would replace a recoverable settings error with an unrecoverable one.
+   */
+  const onWarning = (message: string): void => {
+    try {
+      handler(message);
+    } catch {
+      // Nothing sensible is left to do: the caller asked to be told and could
+      // not cope with being told.
+    }
+  };
+
+  /** Best-effort cleanup; the caller is already handling a failure. */
+  const discard = (file: string): void => {
+    try {
+      fs.rmSync(file, { force: true });
+    } catch {
+      // A leftover temp file is a much smaller problem than a crash.
+    }
+  };
 
   const load = (): AppConfig => {
     try {
@@ -45,12 +69,18 @@ export function createConfigStore(options: ConfigStoreOptions = {}): ConfigStore
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       const backup = corruptBackupPath(configFile);
+      let kept = false;
       try {
         fs.renameSync(configFile, backup);
-        onWarning(`Could not read ${configFile} (${reason}); kept a copy at ${backup}.`);
+        kept = true;
       } catch {
-        onWarning(`Could not read ${configFile} (${reason}); using default settings.`);
+        // The file stays where it is; defaults still load.
       }
+      onWarning(
+        kept
+          ? `Could not read ${configFile} (${reason}); kept a copy at ${backup}.`
+          : `Could not read ${configFile} (${reason}); using default settings.`
+      );
       return { ...DEFAULT_CONFIG };
     }
   };
@@ -65,7 +95,7 @@ export function createConfigStore(options: ConfigStoreOptions = {}): ConfigStore
       fs.writeFileSync(temporary, JSON.stringify(config, null, 2), 'utf-8');
       fs.renameSync(temporary, configFile);
     } catch (error) {
-      fs.rmSync(temporary, { force: true });
+      discard(temporary);
       onWarning(
         `Could not save settings to ${configFile} (${error instanceof Error ? error.message : String(error)}).`
       );
