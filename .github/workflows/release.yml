@@ -61,20 +61,44 @@ jobs:
     environment: npm-publish
     permissions:
       contents: read
-      # Required for npm provenance attestation.
+      # Required for npm trusted publishing (OIDC) and provenance.
       id-token: write
+    env:
+      # Single source of truth for the pinned client, so the install and the
+      # assertion below cannot drift apart.
+      NPM_VERSION: '11.19.0'
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
         with:
           persist-credentials: false
 
+      # No dependency cache in this job. It holds `id-token: write`, so a
+      # poisoned cache entry would execute where a publish can be triggered.
+      # `package-manager-cache` defaults to true, so it must be disabled
+      # explicitly -- omitting `cache` alone still caches.
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or newer. Pinned rather than
+      # `@latest`: this job can publish, so the npm client it runs should be an
+      # explicit, reviewable choice rather than whatever shipped today.
+      # `--ignore-scripts` keeps lifecycle hooks from executing in a job that
+      # holds `id-token: write`, and the assertion turns a pin that silently
+      # failed to apply into a loud failure instead of a surprise client.
+      - name: Install the pinned npm client
+        run: |
+          npm install -g --ignore-scripts "npm@${NPM_VERSION}"
+          installed="$(npm --version)"
+          if [ "$installed" != "$NPM_VERSION" ]; then
+            echo "::error::Expected npm $NPM_VERSION but found $installed"
+            exit 1
+          fi
+          echo "npm $installed confirmed"
 
       - name: Install dependencies
         run: npm ci
@@ -82,7 +106,8 @@ jobs:
       - name: Build
         run: npm run build
 
+      # No token and no secret: npm trusts this repository and workflow
+      # directly, and GitHub mints a short-lived OIDC credential per run.
+      # Provenance is attested automatically under trusted publishing.
       - name: Publish
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
