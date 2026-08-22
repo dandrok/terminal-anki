@@ -1,5 +1,3 @@
-import type { DifficultyLevel } from '../../types/index.js';
-
 /**
  * Ink colour *names*, not hex.
  *
@@ -107,9 +105,4 @@ export const DEFAULT_THEME_ID: ThemeId = 'default';
 
 export function getTheme(id: ThemeId | undefined): ThemePalette {
   return THEMES[id ?? DEFAULT_THEME_ID] ?? THEMES[DEFAULT_THEME_ID];
-}
-
-/** Colour for a card's difficulty bucket. */
-export function difficultyColor(theme: ThemePalette, difficulty: DifficultyLevel): InkColor {
-  return theme[difficulty];
 }

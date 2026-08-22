@@ -27,6 +27,19 @@ export const BACK_CONTROL: Control = {
   description: 'Leave this screen and go back a step'
 };
 
+/**
+ * The way out of a screen that is capturing text.
+ *
+ * `q` types a "q" there and `?` types a question mark, so a footer offering
+ * "[q/esc] back" and "[?] help" is advertising two keys that do something else
+ * entirely. Escape is the one that still leaves, so it is the one shown.
+ */
+export const ESCAPE_ONLY_CONTROL: Control = {
+  key: 'esc',
+  label: 'back',
+  description: 'Leave this screen and go back a step'
+};
+
 export const HELP_CONTROL: Control = {
   key: '?',
   label: 'help',
@@ -55,6 +68,14 @@ export const SELECT_CONTROL: Control = {
 export interface ScreenControlOptions {
   /** Root screens have nowhere to go back to. */
   isRoot?: boolean;
+  /**
+   * The screen is capturing text.
+   *
+   * Help is genuinely unreachable there — `?` is a question mark, not a
+   * command — so the strip stops offering it rather than naming a key that
+   * types instead. Escape still leaves, in the same place it always is.
+   */
+  isTextInput?: boolean;
 }
 
 /**
@@ -67,6 +88,9 @@ export function screenControls(
   specific: readonly Control[] = [],
   options: ScreenControlOptions = {}
 ): Control[] {
+  if (options.isTextInput) {
+    return [...specific, ESCAPE_ONLY_CONTROL];
+  }
   return [...specific, options.isRoot ? ROOT_QUIT_CONTROL : BACK_CONTROL, HELP_CONTROL];
 }
 

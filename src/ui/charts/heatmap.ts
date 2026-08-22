@@ -16,7 +16,7 @@ export const DEFAULT_DAILY_GOAL = 20;
 /** Monday first, matching the row order of the grid. */
 export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
-export const MONTH_LABELS = [
+const MONTH_LABELS = [
   'Jan',
   'Feb',
   'Mar',
@@ -30,9 +30,6 @@ export const MONTH_LABELS = [
   'Nov',
   'Dec'
 ] as const;
-
-/** Levels 0-4: nothing, then four steps up to the daily goal. */
-export const HEATMAP_LEVELS = 5;
 
 export interface HeatmapCell {
   /** Local-calendar YYYY-MM-DD. */

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useInput } from 'ink';
+import { splitKeystrokes } from '../keystrokes.js';
 
 export interface Help {
   isHelpOpen: boolean;
@@ -20,8 +21,12 @@ export function useHelp(): Help {
 
   useInput(
     (input, key) => {
-      // Not `h`: that is the stepper's "-1" key elsewhere.
-      if (input === '?' || key.escape) {
+      const strokes = splitKeystrokes(input);
+      // `q` closes it too. Everywhere else in the application q and esc mean
+      // "leave what you are in", and while the overlay is up, what you are in
+      // is the overlay — pressing q and having nothing happen was the only
+      // place that rule did not hold. Not `h`: that is the stepper's -1 key.
+      if (strokes.includes('?') || strokes.includes('q') || (strokes.length === 1 && key.escape)) {
         setIsHelpOpen(false);
       }
     },

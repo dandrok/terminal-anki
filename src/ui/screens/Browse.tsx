@@ -25,9 +25,10 @@ const BROWSE_CONTROLS: Control[] = screenControls([
   { key: 'u', label: 'undo', description: 'Undo the last delete or edit' }
 ]);
 
-const FILTER_CONTROLS: Control[] = screenControls([
-  { key: '⏎', label: 'done', description: 'Keep the filter and return to the list' }
-]);
+const FILTER_CONTROLS: Control[] = screenControls(
+  [{ key: '⏎', label: 'done', description: 'Keep the filter and return to the list' }],
+  { isTextInput: true }
+);
 
 /**
  * While the delete prompt is up, only these keys do anything.

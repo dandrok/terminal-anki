@@ -61,15 +61,41 @@ describe('help overlay', () => {
   // at all. Verified instead by driving the built CLI under a pty, which shows
   // the screen sequence STATS -> HELP -> STATS.
 
+  it.each(SCREENS)('%s closes help with q', async (_name, build) => {
+    // Everywhere else q and esc mean "leave what you are in", and while the
+    // overlay is up, what you are in is the overlay. Pressing q and having
+    // nothing happen was the one place that rule did not hold.
+    await withRender(inStore(build(vi.fn())), async ({ frame, press }) => {
+      await press('?');
+      expect(frame()).toContain('Keys on this screen');
+      await press('q');
+      expect(frame()).not.toContain('Keys on this screen');
+    });
+  });
+
   it.each(SCREENS.slice(0, 3))(
-    '%s does not navigate away while help is open',
+    '%s closes the overlay with q without also leaving the screen',
     async (_name, build) => {
+      // One q, one effect. Closing help and stepping back out of the screen on
+      // the same keystroke would skip past whatever the help was explaining.
       const onBack = vi.fn();
-      await withRender(inStore(build(onBack)), async ({ press }) => {
+      await withRender(inStore(build(onBack)), async ({ frame, press }) => {
         await press('?');
         await press('q');
         expect(onBack).not.toHaveBeenCalled();
+        expect(frame()).not.toContain('Keys on this screen');
+
+        // And the next q leaves, as it would have without help involved.
+        await press('q');
+        expect(onBack).toHaveBeenCalledOnce();
       });
     }
   );
+
+  it.each(SCREENS)('%s tells you every way to close it', async (_name, build) => {
+    await withRender(inStore(build(vi.fn())), async ({ frame, press }) => {
+      await press('?');
+      expect(frame()).toContain('press [?], [q] or [esc] to close');
+    });
+  });
 });

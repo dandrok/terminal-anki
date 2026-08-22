@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BACK_CONTROL,
+  ESCAPE_ONLY_CONTROL,
   HELP_CONTROL,
   MENU_CONTROLS,
   MOVE_CONTROL,
@@ -36,6 +37,18 @@ const SCREENS: [string, readonly Control[]][] = [
 ];
 
 const ROOT_SCREENS = new Set(['menu']);
+
+/** Screens where q and ? are characters, so the tail is Escape alone. */
+const TEXT_INPUT_SCREENS: [string, readonly Control[]][] = [
+  [
+    'card form',
+    screenControls([{ key: '⏎', label: 'next', description: 'x' }], { isTextInput: true })
+  ],
+  [
+    'browse filter',
+    screenControls([{ key: '⏎', label: 'done', description: 'x' }], { isTextInput: true })
+  ]
+];
 
 describe('screen controls', () => {
   it.each(SCREENS)('%s binds no key twice', (_name, controls) => {
@@ -88,6 +101,21 @@ describe('screen controls', () => {
     // root has nowhere to go back to.
     expect(screenControls([], { isRoot: true })).toContainEqual(ROOT_QUIT_CONTROL);
     expect(screenControls([])).toContainEqual(BACK_CONTROL);
+  });
+
+  it.each(TEXT_INPUT_SCREENS)('%s ends with Escape alone', (_name, controls) => {
+    // Offering "[q/esc] back" and "[?] help" on a screen where both type a
+    // character advertises two keys that do something else entirely.
+    expect(keysOf(controls).at(-1)).toBe(ESCAPE_ONLY_CONTROL.key);
+    expect(controls).not.toContainEqual(HELP_CONTROL);
+    expect(controls).not.toContainEqual(BACK_CONTROL);
+  });
+
+  it.each(TEXT_INPUT_SCREENS)('%s still leaves on the same key', (_name, controls) => {
+    // Escape means the same thing it does everywhere else, and sits last.
+    expect(ESCAPE_ONLY_CONTROL.label).toBe(BACK_CONTROL.label);
+    expect(BACK_CONTROL.key).toContain(ESCAPE_ONLY_CONTROL.key);
+    expect(keysOf(controls).some(key => key.includes('esc'))).toBe(true);
   });
 
   it('keeps screen-specific keys ahead of the tail', () => {

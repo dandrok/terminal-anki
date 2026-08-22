@@ -77,6 +77,11 @@ export function SelectList<T>({
     { isActive }
   );
 
+  // Hints line up in their own column rather than trailing each label by a
+  // single space, where "Browse cards view · edit · delete" read as one run of
+  // text and it was not obvious which half was the entry.
+  const labelWidth = Math.max(0, ...items.map(item => item.label.length));
+
   return (
     <Box flexDirection="column">
       {items.map((item, index) => {
@@ -85,9 +90,9 @@ export function SelectList<T>({
           <Box key={item.label}>
             <Text color={isSelected ? theme.primary : theme.muted}>{isSelected ? '❯ ' : '  '}</Text>
             <Text color={isSelected ? theme.primary : theme.text} bold={isSelected}>
-              {item.label}
+              {item.hint ? item.label.padEnd(labelWidth) : item.label}
             </Text>
-            {item.hint ? <Text color={theme.muted}> {item.hint}</Text> : null}
+            {item.hint ? <Text color={theme.muted}>{`   ${item.hint}`}</Text> : null}
           </Box>
         );
       })}

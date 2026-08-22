@@ -96,18 +96,20 @@ describe('Settings', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it('previews the staged theme on the real frame', async () => {
-    // The point of staging into ThemeContext rather than a mock preview: the
-    // header and footer people actually look at are the ones being recoloured.
+  it('cycles through every theme it ships with', async () => {
+    // The recolouring itself cannot be asserted here: ink-testing-library
+    // renders without a TTY, so chalk strips the escape codes and every theme
+    // produces a byte-identical frame. Verified under a pty instead, where
+    // staging Forest replaces cyanBright (\\e[96m) with green (\\e[32m) across the
+    // whole frame — header and footer included — and leaving without saving
+    // writes no config file.
     await withRender(
       withConfigContext(<Settings onBack={vi.fn()} />, DEFAULT_CONFIG),
       async ({ frame, press }) => {
-        const before = frame();
-        // Two steps along: default → forest → mono, which is visibly different.
-        await press('l');
-        await press('l');
-        expect(frame()).toContain('Monochrome');
-        expect(frame()).not.toBe(before);
+        for (const label of ['Forest', 'Monochrome', 'Dracula', 'Default']) {
+          await press('l');
+          expect(frame()).toContain(label);
+        }
       }
     );
   });

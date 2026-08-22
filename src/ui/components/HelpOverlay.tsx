@@ -43,7 +43,7 @@ export function HelpOverlay({ controls, theme, isNarrow }: HelpOverlayProps) {
 
       <Box marginTop={1}>
         <Text italic color={theme.muted}>
-          press [?] or [esc] to close
+          press [?], [q] or [esc] to close
         </Text>
       </Box>
     </Box>

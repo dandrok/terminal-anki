@@ -1,4 +1,5 @@
 import { DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '../ui/theme/palette.js';
+import { DEFAULT_DAILY_GOAL, HEATMAP_WEEKS } from '../ui/charts/heatmap.js';
 
 /** Bumped only when an old config can no longer be read as-is. */
 export const CONFIG_VERSION = 1;
@@ -19,8 +20,10 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   version: CONFIG_VERSION,
   theme: DEFAULT_THEME_ID,
-  dailyGoal: 20,
-  heatmapWeeks: 15,
+  // Taken from the chart module rather than repeated, so the value a fresh
+  // install starts on and the one the chart falls back to cannot drift apart.
+  dailyGoal: DEFAULT_DAILY_GOAL,
+  heatmapWeeks: HEATMAP_WEEKS,
   defaultSessionLength: null,
   shuffle: true
 };

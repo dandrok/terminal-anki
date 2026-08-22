@@ -24,11 +24,15 @@ const PLACEHOLDERS: Record<Field, string> = {
   tags: 'comma, separated, optional'
 };
 
-const FORM_CONTROLS: Control[] = screenControls([
-  { key: '⏎', label: 'next', description: 'Move to the next field, or save on the last one' },
-  { key: '↑↓', label: 'field', description: 'Move between fields' },
-  { key: '^s', label: 'save', description: 'Save from any field' }
-]);
+// Typing wins on this screen, so the strip names Escape rather than q and ?.
+const FORM_CONTROLS: Control[] = screenControls(
+  [
+    { key: '⏎', label: 'next', description: 'Move to the next field, or save on the last one' },
+    { key: '↑↓', label: 'field', description: 'Move between fields' },
+    { key: '^s', label: 'save', description: 'Save from any field' }
+  ],
+  { isTextInput: true }
+);
 
 export interface CardDraft {
   front: string;

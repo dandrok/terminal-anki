@@ -11,7 +11,7 @@ export interface DailyRollup {
   minutes: number;
 }
 
-export const EMPTY_ROLLUP: Omit<DailyRollup, 'date'> = {
+const EMPTY_ROLLUP: Omit<DailyRollup, 'date'> = {
   cardsStudied: 0,
   correctAnswers: 0,
   sessions: 0,
