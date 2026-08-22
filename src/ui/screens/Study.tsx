@@ -35,6 +35,11 @@ const ANSWER_CONTROLS = screenControls([
 interface GradedEntry {
   cardIndex: number;
   quality: ReviewQuality;
+  /**
+   * Skips recorded before this grade. Undo restores it, otherwise replaying a
+   * card that was skipped after this grade counts the skip twice.
+   */
+  skippedBefore: number;
 }
 
 export interface SessionResult {
@@ -96,7 +101,7 @@ export function Study({ cards, onFinish }: StudyProps) {
       return;
     }
     dispatch({ type: 'card/grade', id: card.id, quality, now: new Date() });
-    const entries = [...graded, { cardIndex: index, quality }];
+    const entries = [...graded, { cardIndex: index, quality, skippedBefore: skipped }];
     setGraded(entries);
     advance(entries);
   };
@@ -106,8 +111,10 @@ export function Study({ cards, onFinish }: StudyProps) {
     if (!last) {
       return;
     }
-    dispatch({ type: 'undo' });
+    dispatch({ type: 'undo', now: new Date() });
     setGraded(graded.slice(0, -1));
+    // Rewind every counter to just before that grade, not only the card.
+    setSkipped(last.skippedBefore);
     // Step back to the card that was undone, so it is seen again.
     setIndex(last.cardIndex);
     setRevealed(false);

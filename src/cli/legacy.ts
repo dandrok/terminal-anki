@@ -34,6 +34,7 @@ async function runSession(
   const difficulties: number[] = [];
   let correctAnswers = 0;
   let studied = 0;
+  let skipped = 0;
   let quitEarly = false;
 
   studyScreens.showSessionStart(
@@ -50,6 +51,7 @@ async function runSession(
       break;
     }
     if (action === 'skip') {
+      skipped++;
       continue;
     }
 
@@ -94,7 +96,9 @@ async function runSession(
 
   studyScreens.showSessionSummary({
     studied,
-    skipped: sessionCards.length - studied,
+    // Only cards the learner actually passed over; quitting leaves the rest
+    // unseen rather than skipped.
+    skipped,
     remainingDue: selectDueCards(snap(store)).length,
     quitEarly
   });
@@ -167,7 +171,7 @@ async function deleteCard(store: Store): Promise<void> {
   }
 
   const before = snap(store);
-  store.dispatch({ type: 'card/delete', id });
+  store.dispatch({ type: 'card/delete', id, now: new Date() });
   if (snap(store) !== before) {
     showSuccess('Card deleted successfully!');
   } else {

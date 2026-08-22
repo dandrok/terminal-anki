@@ -32,10 +32,10 @@ describe('undo of a delete', () => {
     const state = withCards('a', 'b', 'c');
     const middleId = state.data.cards[1].id;
 
-    const deleted = reduce(state, { type: 'card/delete', id: middleId });
+    const deleted = reduce(state, { type: 'card/delete', id: middleId, now: NOW });
     expect(fronts(deleted)).toEqual(['a', 'c']);
 
-    const restored = reduce(deleted, { type: 'undo' });
+    const restored = reduce(deleted, { type: 'undo', now: NOW });
     expect(fronts(restored)).toEqual(['a', 'b', 'c']);
   });
 
@@ -43,7 +43,11 @@ describe('undo of a delete', () => {
     const state = withCards('a');
     const original = state.data.cards[0];
 
-    const restored = run(state, { type: 'card/delete', id: original.id }, { type: 'undo' });
+    const restored = run(
+      state,
+      { type: 'card/delete', id: original.id, now: NOW },
+      { type: 'undo', now: NOW }
+    );
     expect(restored.data.cards[0]).toEqual(original);
   });
 });
@@ -59,7 +63,7 @@ describe('undo of a grade', () => {
     const graded = reduce(state, { type: 'card/grade', id: card.id, quality: 5, now: NOW });
     expect(graded.data.cards[0].repetitions).toBe(1);
 
-    const undone = reduce(graded, { type: 'undo' });
+    const undone = reduce(graded, { type: 'undo', now: NOW });
     expect(undone.data.cards[0]).toEqual(card);
     expect(undone.data.cards[0].easiness).toBe(card.easiness);
     expect(undone.data.cards[0].lastReview).toBeNull();
@@ -76,7 +80,7 @@ describe('undo of a grade', () => {
 
     const before = state.data.cards[0];
     const graded = reduce(state, { type: 'card/grade', id, quality: 0, now: NOW });
-    const undone = reduce(graded, { type: 'undo' });
+    const undone = reduce(graded, { type: 'undo', now: NOW });
     expect(undone.data.cards[0]).toEqual(before);
   });
 });
@@ -97,19 +101,21 @@ describe('undo of an edit', () => {
       id: original.id,
       front: 'Q2',
       back: 'A2',
-      tags: ['new']
+      tags: ['new'],
+      now: NOW
     });
     expect(edited.data.cards[0]).toMatchObject({ front: 'Q2', back: 'A2', tags: ['new'] });
 
-    const undone = reduce(edited, { type: 'undo' });
+    const undone = reduce(edited, { type: 'undo', now: NOW });
     expect(undone.data.cards[0]).toEqual(original);
   });
 });
 
 describe('recording a session', () => {
   it('marks a study day, which is why an empty session must not be recorded', () => {
-    // The guard lives in the caller (cli/app.ts): quitting before grading
-    // anything would otherwise advance the streak for doing no work.
+    // The guard lives in the caller (StudyFlow.finish, and legacy.ts for the
+    // screens not yet ported): it skips session/record when studied is zero,
+    // because quitting before grading anything must not advance the streak.
     const recorded = reduce(blank(), {
       type: 'session/record',
       now: NOW,
@@ -129,6 +135,29 @@ describe('recording a session', () => {
   });
 });
 
+describe('achievement progress', () => {
+  const progress = (state: AppState, id: string) =>
+    state.data.achievements.find(a => a.id === id)!.progress.current;
+
+  it('tracks reviews as cards are graded, not only when a session ends', () => {
+    // Grading used to leave reviews_100 reading 0 until a session was recorded.
+    let state = withCards('a');
+    const id = state.data.cards[0].id;
+    for (let i = 0; i < 5; i++) {
+      state = reduce(state, { type: 'card/grade', id, quality: 3, now: NOW });
+    }
+    expect(state.data.cards[0].repetitions).toBe(5);
+    expect(progress(state, 'reviews_100')).toBe(5);
+  });
+
+  it('refreshes after a delete', () => {
+    const state = withCards('a', 'b');
+    const deleted = reduce(state, { type: 'card/delete', id: state.data.cards[0].id, now: NOW });
+    // Peak progress never regresses, but the achievement was evaluated.
+    expect(progress(deleted, 'cards_10')).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('undo stack', () => {
   it('is empty to begin with', () => {
     expect(selectCanUndo(blank())).toBe(false);
@@ -136,20 +165,24 @@ describe('undo stack', () => {
 
   it('does nothing when there is nothing to undo', () => {
     const state = blank();
-    expect(reduce(state, { type: 'undo' })).toBe(state);
+    expect(reduce(state, { type: 'undo', now: NOW })).toBe(state);
   });
 
   it('unwinds in reverse order', () => {
     let state = withCards('a', 'b', 'c');
     const [first, second] = [state.data.cards[0].id, state.data.cards[1].id];
 
-    state = run(state, { type: 'card/delete', id: first }, { type: 'card/delete', id: second });
+    state = run(
+      state,
+      { type: 'card/delete', id: first, now: NOW },
+      { type: 'card/delete', id: second, now: NOW }
+    );
     expect(fronts(state)).toEqual(['c']);
 
-    state = reduce(state, { type: 'undo' });
+    state = reduce(state, { type: 'undo', now: NOW });
     expect(fronts(state)).toEqual(['b', 'c']);
 
-    state = reduce(state, { type: 'undo' });
+    state = reduce(state, { type: 'undo', now: NOW });
     expect(fronts(state)).toEqual(['a', 'b', 'c']);
   });
 
@@ -193,7 +226,7 @@ describe('undo stack', () => {
   it('never mutates the state it is given', () => {
     const state = withCards('a', 'b');
     const snapshot = JSON.stringify(state);
-    reduce(state, { type: 'card/delete', id: state.data.cards[0].id });
+    reduce(state, { type: 'card/delete', id: state.data.cards[0].id, now: NOW });
     expect(JSON.stringify(state)).toBe(snapshot);
   });
 });

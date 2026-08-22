@@ -34,6 +34,10 @@ export function SelectList<T>({
 
   useInput(
     (input, key) => {
+      // `% 0` is NaN, which would hand the caller a nonsense index.
+      if (items.length === 0) {
+        return;
+      }
       if (key.upArrow || input === 'k') {
         onMove((selectedIndex - 1 + items.length) % items.length);
       } else if (key.downArrow || input === 'j') {

@@ -13,12 +13,19 @@ import type {
  */
 export type AppAction =
   | { type: 'card/add'; front: string; back: string; tags: readonly string[]; now: Date }
-  | { type: 'card/delete'; id: string }
-  | { type: 'card/edit'; id: string; front?: string; back?: string; tags?: readonly string[] }
+  | { type: 'card/delete'; id: string; now: Date }
+  | {
+      type: 'card/edit';
+      id: string;
+      front?: string;
+      back?: string;
+      tags?: readonly string[];
+      now: Date;
+    }
   | { type: 'card/grade'; id: string; quality: ReviewQuality; now: Date }
   | { type: 'session/record'; session: Omit<StudySessionRecord, 'id'>; now: Date }
   | { type: 'session/clearUndo' }
-  | { type: 'undo' }
+  | { type: 'undo'; now: Date }
   | { type: 'seed'; cards: readonly Flashcard[] };
 
 /** Restores what a single undoable action replaced. */

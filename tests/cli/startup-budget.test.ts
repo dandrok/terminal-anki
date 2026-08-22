@@ -21,9 +21,14 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
  * capital R differs anyway.
  */
 function scanSpecifiers(source: string): string[] {
+  // `import type` and `export type` are erased at compile time and cost
+  // nothing at runtime, so counting them would fail the budget for a file that
+  // merely names a type from Ink.
+  const runtime = source.replace(/^\s*(?:import|export)\s+type\s+[^;]*;?$/gm, '');
+
   return [
-    ...source.matchAll(/\b(?:from|import)\s+['"]([^'"]+)['"]/g),
-    ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)
+    ...runtime.matchAll(/\b(?:from|import)\s+['"]([^'"]+)['"]/g),
+    ...runtime.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)
   ].map(match => match[1]);
 }
 
@@ -37,7 +42,13 @@ function reachablePackages(entry: string): Set<string> {
   const packages = new Set<string>();
 
   const readSource = (base: string): string | null => {
-    for (const candidate of [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`]) {
+    for (const candidate of [
+      base,
+      `${base}.ts`,
+      `${base}.tsx`,
+      `${base}/index.ts`,
+      `${base}/index.tsx`
+    ]) {
       try {
         return readFileSync(candidate, 'utf8');
       } catch {
@@ -114,7 +125,9 @@ describe('CLI startup budget', () => {
   it.each([
     ["const ink = await import('ink');", 'dynamic import'],
     ['const ink = await import(`ink`);', 'dynamic import, template literal'],
-    ['const req = createRequire(import.meta.url);', 'createRequire setup']
+    ['const req = createRequire(import.meta.url);', 'createRequire setup'],
+    ["import type { Key } from 'ink';", 'type-only import, erased at compile time'],
+    ["export type { Key } from 'ink';", 'type-only re-export']
   ])('ignores %s (%s)', source => {
     expect(packagesInSource(source)).not.toContain('ink');
   });

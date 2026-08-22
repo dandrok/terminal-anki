@@ -134,10 +134,10 @@ describe('write batching', () => {
     expect(saves.length).toBe(1);
 
     const id = selectCards(store.getSnapshot())[0].id;
-    store.dispatch({ type: 'card/edit', id, front: 'Q2' });
+    store.dispatch({ type: 'card/edit', id, front: 'Q2', now: NOW });
     expect(saves.length).toBe(2);
 
-    store.dispatch({ type: 'card/delete', id });
+    store.dispatch({ type: 'card/delete', id, now: NOW });
     expect(saves.length).toBe(3);
   });
 
@@ -226,11 +226,11 @@ describe('write batching', () => {
     store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW });
     const id = selectCards(store.getSnapshot())[0].id;
 
-    store.dispatch({ type: 'card/delete', id });
+    store.dispatch({ type: 'card/delete', id, now: NOW });
     expect(current().cards).toHaveLength(0);
     const afterDelete = saves.length;
 
-    store.dispatch({ type: 'undo' });
+    store.dispatch({ type: 'undo', now: NOW });
     expect(saves.length).toBe(afterDelete + 1);
     expect(current().cards).toHaveLength(1);
   });

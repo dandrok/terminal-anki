@@ -29,6 +29,23 @@ describe('splitKeystrokes', () => {
     expect(splitKeystrokes(sequence)).toEqual([sequence]);
   });
 
+  it('keeps an escape sequence intact when it follows ordinary text', () => {
+    // Typing a letter and an arrow key in the same read used to shred the
+    // sequence into ESC, '[' and 'B'.
+    expect(splitKeystrokes(`a${ESC}[B`)).toEqual(['a', `${ESC}[B`]);
+  });
+
+  it.each([
+    ['CSI arrow after text', `3${ESC}[A`, ['3', `${ESC}[A`]],
+    ['SS3 sequence after text', `x${ESC}OP`, ['x', `${ESC}OP`]],
+    ['CSI with parameters', `${ESC}[1;5A`, [`${ESC}[1;5A`]],
+    ['tilde-terminated sequence', `${ESC}[3~`, [`${ESC}[3~`]],
+    ['two sequences in one read', `${ESC}[A${ESC}[B`, [`${ESC}[A`, `${ESC}[B`]],
+    ['bare escape then a letter', `${ESC}q`, [ESC, 'q']]
+  ])('splits %s correctly', (_name, input, expected) => {
+    expect(splitKeystrokes(input)).toEqual(expected);
+  });
+
   it('handles an empty chunk', () => {
     expect(splitKeystrokes('')).toEqual(['']);
   });

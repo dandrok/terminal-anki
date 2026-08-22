@@ -13,7 +13,19 @@ export interface Rendered {
   press: (input: string) => Promise<void>;
 }
 
-const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+/**
+ * Let Ink finish rendering.
+ *
+ * A single zero-delay timer is not always enough: React can defer work past the
+ * first timer, so the frame read straight afterwards would still be the
+ * previous one. Draining a macrotask and the microtask queue twice covers it.
+ */
+const tick = async (): Promise<void> => {
+  for (let i = 0; i < 2; i++) {
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await Promise.resolve();
+  }
+};
 
 /** Render, run the assertions, and always unmount — even on failure. */
 export async function withRender(

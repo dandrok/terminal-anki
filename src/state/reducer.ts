@@ -48,6 +48,25 @@ function withAchievements(data: PersistedData, now: Date, sessionAccuracyPct: nu
   );
 }
 
+/**
+ * Apply an action's result, refreshing achievement progress.
+ *
+ * Every action that changes cards or history goes through here. Doing it only
+ * on `card/add` and `session/record` left grading invisible to `reviews_100`
+ * until a session was recorded, and deleting invisible to the card counts.
+ */
+function commit(
+  data: PersistedData,
+  now: Date,
+  undo: readonly UndoEntry[],
+  sessionAccuracyPct: number | null = null
+): AppState {
+  return {
+    data: { ...data, achievements: withAchievements(data, now, sessionAccuracyPct) },
+    undo
+  };
+}
+
 /** Replace one card by id, leaving the array order intact. */
 function replaceCard(cards: readonly Flashcard[], next: Flashcard): Flashcard[] {
   return cards.map(card => (card.id === next.id ? next : card));
@@ -78,11 +97,7 @@ export function reduce(state: AppState, action: AppAction): AppState {
         createdAt: action.now
       };
 
-      const withCard = { ...state.data, cards: [...state.data.cards, card] };
-      return {
-        data: { ...withCard, achievements: withAchievements(withCard, action.now, null) },
-        undo: state.undo
-      };
+      return commit({ ...state.data, cards: [...state.data.cards, card] }, action.now, state.undo);
     }
 
     case 'card/delete': {
@@ -93,11 +108,12 @@ export function reduce(state: AppState, action: AppAction): AppState {
 
       const card = state.data.cards[index];
       const cards = state.data.cards.filter(entry => entry.id !== action.id);
-      return {
-        data: { ...state.data, cards },
+      return commit(
+        { ...state.data, cards },
+        action.now,
         // The original index is stored so undo restores position, not order.
-        undo: pushUndo(state.undo, { kind: 'delete', card, index })
-      };
+        pushUndo(state.undo, { kind: 'delete', card, index })
+      );
     }
 
     case 'card/edit': {
@@ -113,10 +129,11 @@ export function reduce(state: AppState, action: AppAction): AppState {
         ...(action.tags !== undefined ? { tags: normalizeTags(action.tags) } : {})
       };
 
-      return {
-        data: { ...state.data, cards: replaceCard(state.data.cards, next) },
-        undo: pushUndo(state.undo, { kind: 'edit', card: existing })
-      };
+      return commit(
+        { ...state.data, cards: replaceCard(state.data.cards, next) },
+        action.now,
+        pushUndo(state.undo, { kind: 'edit', card: existing })
+      );
     }
 
     case 'card/grade': {
@@ -126,12 +143,13 @@ export function reduce(state: AppState, action: AppAction): AppState {
       }
 
       const next: Flashcard = { ...existing, ...schedule(existing, action.quality, action.now) };
-      return {
-        data: { ...state.data, cards: replaceCard(state.data.cards, next) },
+      return commit(
+        { ...state.data, cards: replaceCard(state.data.cards, next) },
+        action.now,
         // SM-2 is lossy (easiness is clamped, intervals are ceil'd), so the
         // prior card is snapshotted rather than inverted.
-        undo: pushUndo(state.undo, { kind: 'grade', card: existing })
-      };
+        pushUndo(state.undo, { kind: 'grade', card: existing })
+      );
     }
 
     case 'session/record': {
@@ -139,15 +157,13 @@ export function reduce(state: AppState, action: AppAction): AppState {
       const sessionHistory = [...state.data.sessionHistory, session].slice(-MAX_SESSION_HISTORY);
       const learningStreak = recordStudyDay(state.data.learningStreak, session.startTime);
 
-      const withSession = { ...state.data, sessionHistory, learningStreak };
-      return {
-        data: {
-          ...withSession,
-          achievements: withAchievements(withSession, action.now, sessionAccuracy(session))
-        },
-        // A graded card must not be undoable once its session is on record.
-        undo: []
-      };
+      // A graded card must not be undoable once its session is on record.
+      return commit(
+        { ...state.data, sessionHistory, learningStreak },
+        action.now,
+        [],
+        sessionAccuracy(session)
+      );
     }
 
     case 'session/clearUndo':
@@ -164,10 +180,14 @@ export function reduce(state: AppState, action: AppAction): AppState {
       if (entry.kind === 'delete') {
         const cards = [...state.data.cards];
         cards.splice(Math.min(entry.index, cards.length), 0, entry.card);
-        return { data: { ...state.data, cards }, undo };
+        return commit({ ...state.data, cards }, action.now, undo);
       }
 
-      return { data: { ...state.data, cards: replaceCard(state.data.cards, entry.card) }, undo };
+      return commit(
+        { ...state.data, cards: replaceCard(state.data.cards, entry.card) },
+        action.now,
+        undo
+      );
     }
   }
 }

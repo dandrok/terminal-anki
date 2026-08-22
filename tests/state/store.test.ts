@@ -13,9 +13,22 @@ import type { StudySessionRecord } from '../../src/types/index.js';
 
 let workspace: string;
 let dataFile: string;
+let opened: Store[] = [];
+
+/**
+ * Create a store and remember it, so `afterEach` can dispose it.
+ *
+ * An undisposed store keeps a debounce timer that could fire after the
+ * workspace is deleted and recreate the directory underneath another test.
+ */
+function makeStore(options: Parameters<typeof createStore>[0] = {}): Store {
+  const created = createStore({ dataFile, legacyFile: null, ...options });
+  opened.push(created);
+  return created;
+}
 
 function store(seedSampleCards = false): Store {
-  return createStore({ dataFile, legacyFile: null, seedSampleCards });
+  return makeStore({ seedSampleCards });
 }
 
 const cards = (s: Store) => [...selectCards(s.getSnapshot())];
@@ -47,9 +60,14 @@ function session(overrides: Partial<Omit<StudySessionRecord, 'id'>> = {}) {
 beforeEach(() => {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'anki-store-'));
   dataFile = path.join(workspace, 'flashcards.json');
+  opened = [];
 });
 
 afterEach(() => {
+  for (const created of opened) {
+    created.dispose();
+  }
+  opened = [];
   fs.rmSync(workspace, { recursive: true, force: true });
 });
 
@@ -60,7 +78,7 @@ describe('card ids', () => {
     const s = store();
     const created = ['a', 'b', 'c', 'd', 'e'].map(front => addCard(s, front));
 
-    s.dispatch({ type: 'card/delete', id: created[2].id });
+    s.dispatch({ type: 'card/delete', id: created[2].id, now: new Date() });
     const added = addCard(s, 'f');
 
     const ids = cards(s).map(card => card.id);
@@ -72,17 +90,17 @@ describe('card ids', () => {
     const s = store();
     const keep = addCard(s, 'keep');
     const drop = addCard(s, 'drop');
-    s.dispatch({ type: 'card/delete', id: keep.id });
+    s.dispatch({ type: 'card/delete', id: keep.id, now: new Date() });
     addCard(s, 'new');
 
-    s.dispatch({ type: 'card/delete', id: drop.id });
+    s.dispatch({ type: 'card/delete', id: drop.id, now: new Date() });
     expect(cards(s).map(card => card.front)).toEqual(['new']);
   });
 
   it('ignores an unknown id without changing state', () => {
     const s = store();
     const before = s.getSnapshot();
-    s.dispatch({ type: 'card/delete', id: 'does-not-exist' });
+    s.dispatch({ type: 'card/delete', id: 'does-not-exist', now: new Date() });
     expect(s.getSnapshot()).toBe(before);
   });
 });
@@ -115,21 +133,21 @@ describe('addCard', () => {
 
 describe('sample cards', () => {
   it('seeds a first run', () => {
-    expect(cards(createStore({ dataFile, legacyFile: null }))).toHaveLength(5);
+    expect(cards(makeStore())).toHaveLength(5);
   });
 
   it('does not resurrect samples after the last card is deleted', () => {
     // Regression: an empty collection re-seeded samples on every launch.
-    const s = createStore({ dataFile, legacyFile: null });
+    const s = makeStore();
     for (const card of cards(s)) {
-      s.dispatch({ type: 'card/delete', id: card.id });
+      s.dispatch({ type: 'card/delete', id: card.id, now: new Date() });
     }
     s.flush();
-    expect(cards(createStore({ dataFile, legacyFile: null }))).toEqual([]);
+    expect(cards(makeStore())).toEqual([]);
   });
 
   it('gives sample cards distinct ids', () => {
-    const ids = cards(createStore({ dataFile, legacyFile: null })).map(c => c.id);
+    const ids = cards(makeStore()).map(c => c.id);
     expect(new Set(ids).size).toBe(5);
   });
 
@@ -140,7 +158,7 @@ describe('sample cards', () => {
       throw new Error('denied');
     };
     try {
-      const s = createStore({ dataFile, legacyFile: null, onWarning: () => undefined });
+      const s = makeStore({ onWarning: () => undefined });
       expect(cards(s)).toEqual([]);
       expect(fs.readFileSync(dataFile, 'utf-8')).toBe('{ broken json');
     } finally {
@@ -259,21 +277,21 @@ describe('editing', () => {
   it('replaces and normalizes tags', () => {
     const s = store();
     const card = addCard(s, 'Q', 'A', ['old']);
-    s.dispatch({ type: 'card/edit', id: card.id, tags: [' New ', 'NEW'] });
+    s.dispatch({ type: 'card/edit', id: card.id, tags: [' New ', 'NEW'], now: new Date() });
     expect(cards(s)[0].tags).toEqual(['new']);
   });
 
   it('edits front and back', () => {
     const s = store();
     const card = addCard(s, 'Q', 'A');
-    s.dispatch({ type: 'card/edit', id: card.id, front: 'Q2', back: 'A2' });
+    s.dispatch({ type: 'card/edit', id: card.id, front: 'Q2', back: 'A2', now: new Date() });
     expect(cards(s)[0]).toMatchObject({ front: 'Q2', back: 'A2' });
   });
 
   it('ignores an unknown card', () => {
     const s = store();
     const before = s.getSnapshot();
-    s.dispatch({ type: 'card/edit', id: 'nope', tags: ['x'] });
+    s.dispatch({ type: 'card/edit', id: 'nope', tags: ['x'], now: new Date() });
     expect(s.getSnapshot()).toBe(before);
   });
 });
@@ -296,7 +314,7 @@ describe('subscribe', () => {
     const s = store();
     const listener = vi.fn();
     s.subscribe(listener);
-    s.dispatch({ type: 'card/delete', id: 'missing' });
+    s.dispatch({ type: 'card/delete', id: 'missing', now: new Date() });
     expect(listener).not.toHaveBeenCalled();
   });
 });

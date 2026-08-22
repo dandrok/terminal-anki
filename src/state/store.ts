@@ -51,7 +51,7 @@ export interface Store {
   flush: () => void;
   /** Re-read from disk, discarding undo history. */
   reload: () => void;
-  /** Cancel timers and flush. */
+  /** Flush, cancel timers and release listeners. Never throws. */
   dispose: () => void;
 }
 
@@ -195,8 +195,15 @@ export function createStore(options: StoreOptions = {}): Store {
       notify();
     },
     dispose: () => {
-      flush();
-      listeners.clear();
+      // flush() re-arms the timer on failure and rethrows; neither is wanted
+      // here. Disposal must not leave a live timer behind, and must not let a
+      // write error stop the listeners being released.
+      try {
+        flushSafely();
+      } finally {
+        cancelTimer();
+        listeners.clear();
+      }
     }
   };
 }

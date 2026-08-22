@@ -146,8 +146,18 @@ export function createRepository(options: RepositoryOptions = {}): Repository {
     const data = normalizePersistedData(parsed);
     if (migratedFrom) {
       // Copy the migrated data into the new home straight away, so the legacy
-      // file is only ever read once.
-      save(data);
+      // file is only ever read once. A failure here must not stop the
+      // application starting: the data was read successfully, the legacy file
+      // is untouched, and the migration simply retries next run.
+      try {
+        save(data);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        onWarning(
+          `Loaded data from ${migratedFrom} but could not write it to ${dataFile} (${reason}). ` +
+            `The migration will be retried on the next run.`
+        );
+      }
     }
 
     return { data, isNew: false, ...(migratedFrom ? { migratedFrom } : {}) };
