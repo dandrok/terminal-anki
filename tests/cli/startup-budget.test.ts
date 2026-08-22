@@ -6,6 +6,28 @@ import { describe, expect, it } from 'vitest';
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
 
 /**
+ * Every module specifier a source string loads eagerly.
+ *
+ * Covers all the static forms:
+ *   import … from 'x'      / import 'x'        (side-effect, no from clause)
+ *   require('x')                               (main.ts sets up createRequire)
+ *   import x = require('x')                    (caught by the require branch)
+ *
+ * A dynamic `await import('x')` is deliberately NOT matched — there `import` is
+ * followed by `(` rather than whitespace — because deferring Ink behind a
+ * dynamic import is precisely what keeps it off the fast path.
+ *
+ * `\brequire` does not match `createRequire`: no word boundary mid-word, and the
+ * capital R differs anyway.
+ */
+function scanSpecifiers(source: string): string[] {
+  return [
+    ...source.matchAll(/\b(?:from|import)\s+['"]([^'"]+)['"]/g),
+    ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)
+  ].map(match => match[1]);
+}
+
+/**
  * Collect every external package reachable from an entry module by walking
  * relative imports. Source files import with `.js` specifiers (NodeNext), which
  * resolve to `.ts`/`.tsx` on disk.
@@ -36,23 +58,23 @@ function reachablePackages(entry: string): Set<string> {
       return;
     }
 
-    // Matches both `from '...'` and side-effect-only `import '...'` (which has
-    // no `from` clause and would otherwise slip through). A dynamic
-    // `await import('...')` is deliberately NOT matched — `import` is followed
-    // by `(` rather than whitespace — because that is precisely the mechanism
-    // that keeps Ink off the fast path.
-    for (const match of source.matchAll(/\b(?:from|import)\s+['"]([^'"]+)['"]/g)) {
-      const specifier = match[1];
-      if (specifier.startsWith('.')) {
-        walk(resolve(dirname(file), specifier));
-      } else {
+    for (const specifier of scanSpecifiers(source)) {
+      if (!specifier.startsWith('.')) {
         packages.add(specifier);
+      } else if (!specifier.endsWith('.json')) {
+        // JSON is data, not an edge in the module graph.
+        walk(resolve(dirname(file), specifier));
       }
     }
   };
 
   walk(entry);
   return packages;
+}
+
+/** Bare package specifiers a source string loads eagerly. */
+function packagesInSource(source: string): string[] {
+  return scanSpecifiers(source).filter(specifier => !specifier.startsWith('.'));
 }
 
 describe('CLI startup budget', () => {
@@ -75,5 +97,25 @@ describe('CLI startup budget', () => {
 
   it('still reaches the packages it genuinely needs', () => {
     expect([...packages]).toContain('node:module');
+  });
+
+  // The scanner has to see every eager form, not just ESM `import`. These pin
+  // the shapes that previously slipped through.
+  it.each([
+    ["import { render } from 'ink';", 'esm named import'],
+    ["import 'ink';", 'esm side-effect import'],
+    ["const ink = require('ink');", 'commonjs require'],
+    ["import ink = require('ink');", 'typescript import-equals'],
+    ["const ink = require( 'ink' );", 'require with padding']
+  ])('detects %s (%s)', source => {
+    expect(packagesInSource(source)).toContain('ink');
+  });
+
+  it.each([
+    ["const ink = await import('ink');", 'dynamic import'],
+    ['const ink = await import(`ink`);', 'dynamic import, template literal'],
+    ['const req = createRequire(import.meta.url);', 'createRequire setup']
+  ])('ignores %s (%s)', source => {
+    expect(packagesInSource(source)).not.toContain('ink');
   });
 });
