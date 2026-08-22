@@ -1,54 +1,28 @@
 import { shuffle } from '../core/filters.js';
-import { createStore, type Store, type StoreOptions } from '../state/store.js';
 import {
   selectAllTags,
   selectCards,
   selectDueCards,
-  selectExtendedStats,
   selectFilteredCards,
   selectSearchResults
 } from '../state/selectors.js';
 import { showError, showSuccess } from '../ui/messages.js';
-import * as menu from '../ui/screens/menu.js';
 import * as cardScreens from '../ui/screens/cards.js';
 import * as studyScreens from '../ui/screens/study.js';
-import * as progressScreens from '../ui/screens/progress.js';
-import { pressBack, text, wasCancelled } from '../ui/prompts.js';
+import { text, wasCancelled } from '../ui/prompts.js';
+import type { Store } from '../state/store.js';
 import type { CustomStudyFilters, Flashcard, SessionType } from '../types/index.js';
+import type { Screen } from '../ui/screens/Screen.js';
 
-/** Read the current snapshot. Kept terse because it is used everywhere. */
+/**
+ * Screens still driven by @clack/prompts.
+ *
+ * Temporary: each function here is replaced by an Ink screen in a later phase,
+ * and this file disappears with the last one. It exists so the application
+ * stays fully usable while the interface is ported one screen at a time.
+ */
+
 const snap = (store: Store) => store.getSnapshot();
-
-async function studyMode(store: Store): Promise<void> {
-  const due = selectDueCards(snap(store));
-  if (due.length === 0) {
-    showSuccess('No cards due for review! Great job!');
-    return;
-  }
-
-  const length = await studyScreens.chooseSessionLength(due.length);
-  if (length === null) {
-    return;
-  }
-
-  await runSession(store, shuffle(due).slice(0, length), 'due');
-}
-
-async function customStudyMode(store: Store): Promise<void> {
-  const filters = await studyScreens.customStudySetup(selectAllTags(snap(store)));
-  if (!filters) {
-    return;
-  }
-
-  // Every criterion is applied in one pass, so `dueOnly` actually takes effect.
-  const selected = selectFilteredCards(snap(store), filters);
-  if (selected.length === 0) {
-    showError('No cards match your filters!');
-    return;
-  }
-
-  await runSession(store, selected, 'custom', filters);
-}
 
 async function runSession(
   store: Store,
@@ -66,12 +40,6 @@ async function runSession(
     sessionCards.length,
     sessionType === 'custom' ? 'custom' : sessionType
   );
-  if (filters) {
-    const description = studyScreens.describeFilters(filters);
-    if (description) {
-      console.log(description);
-    }
-  }
 
   for (const [index, card] of sessionCards.entries()) {
     studyScreens.showQuestion(card, index, sessionCards.length);
@@ -95,15 +63,14 @@ async function runSession(
 
     store.dispatch({ type: 'card/grade', id: card.id, quality: grade, now: new Date() });
     studied++;
-    // Invert the grade so 0 is easiest and 5 is hardest.
     difficulties.push(5 - grade);
     if (grade >= 3) {
       correctAnswers++;
     }
   }
 
-  // Recording a session marks today as a study day and advances the streak.
-  // Quitting before grading anything is not studying, so it must not count.
+  // Recording a session marks today as a study day; quitting before grading
+  // anything is not studying.
   if (studied > 0) {
     store.dispatch({
       type: 'session/record',
@@ -128,11 +95,37 @@ async function runSession(
   studyScreens.showSessionSummary({
     studied,
     skipped: sessionCards.length - studied,
-    // Recounted from the collection rather than subtracted from the starting
-    // total, so cards graded "Again" (due back in 10 minutes) are included.
     remainingDue: selectDueCards(snap(store)).length,
     quitEarly
   });
+}
+
+async function study(store: Store): Promise<void> {
+  const due = selectDueCards(snap(store));
+  if (due.length === 0) {
+    showSuccess('No cards due for review! Great job!');
+    return;
+  }
+
+  const length = await studyScreens.chooseSessionLength(due.length);
+  if (length === null) {
+    return;
+  }
+  await runSession(store, shuffle(due).slice(0, length), 'due');
+}
+
+async function customStudy(store: Store): Promise<void> {
+  const filters = await studyScreens.customStudySetup(selectAllTags(snap(store)));
+  if (!filters) {
+    return;
+  }
+
+  const selected = selectFilteredCards(snap(store), filters);
+  if (selected.length === 0) {
+    showError('No cards match your filters!');
+    return;
+  }
+  await runSession(store, selected, 'custom', filters);
 }
 
 async function addCard(store: Store): Promise<void> {
@@ -150,23 +143,16 @@ async function addCard(store: Store): Promise<void> {
   showSuccess('Flashcard added successfully!');
 }
 
-async function listCards(store: Store): Promise<void> {
+async function browse(store: Store): Promise<void> {
   const all = [...selectCards(snap(store))];
   if (all.length === 0) {
     showSuccess('No flashcards found!');
     return;
   }
-
-  const view = await cardScreens.chooseListView(all.length);
-  if (view === 'quick') {
-    cardScreens.listCards(all);
-    await pressBack();
-  } else if (view === 'browse') {
-    await cardScreens.browseCards(all);
-  }
+  await cardScreens.browseCards(all);
 }
 
-async function searchCards(store: Store): Promise<void> {
+async function search(store: Store): Promise<void> {
   const query = await text('◉ Search for:', { placeholder: 'Enter search terms...' });
   if (wasCancelled(query) || !query.trim()) {
     return;
@@ -189,57 +175,23 @@ async function deleteCard(store: Store): Promise<void> {
   }
 }
 
-async function dispatchAction(
-  store: Store,
-  action: Exclude<menu.MenuAction, 'exit'>
-): Promise<void> {
-  switch (action) {
+export async function runLegacyScreen(store: Store, screen: Screen): Promise<void> {
+  switch (screen) {
     case 'study':
-      return studyMode(store);
-    case 'custom_study':
-      return customStudyMode(store);
+      return study(store);
+    case 'custom-study':
+      return customStudy(store);
     case 'add':
       return addCard(store);
-    case 'list':
-      return listCards(store);
+    case 'browse':
+      return browse(store);
     case 'search':
-      return searchCards(store);
+      return search(store);
     case 'delete':
       return deleteCard(store);
-    case 'achievements':
-      return progressScreens.showAchievements(selectExtendedStats(snap(store)).achievements);
-    case 'analytics':
-      return progressScreens.showAnalytics(selectExtendedStats(snap(store)));
-    case 'stats':
-      return progressScreens.showQuickStats(selectExtendedStats(snap(store)));
-  }
-}
-
-/** Run the interactive menu loop until the user exits. */
-export async function runInteractive(store: Store): Promise<void> {
-  menu.showIntro();
-
-  for (;;) {
-    const action = await menu.showMainMenu(selectExtendedStats(snap(store)));
-
-    if (action === 'exit') {
-      menu.showOutro();
+    default:
       return;
-    }
-
-    try {
-      await dispatchAction(store, action);
-    } catch (error) {
-      showError(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
-    }
   }
 }
 
-/** Run a single study session and return, used by `anki --study`. */
-export async function runStudyOnly(store: Store): Promise<void> {
-  await studyMode(store);
-}
-
-export function createAppStore(options: StoreOptions = {}): Store {
-  return createStore(options);
-}
+export { study as runStudySession };

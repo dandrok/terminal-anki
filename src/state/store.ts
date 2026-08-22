@@ -37,14 +37,16 @@ export interface StoreOptions extends RepositoryOptions {
 export interface Store {
   readonly dataFile: string;
   /** Current snapshot. Identity changes only when state actually changed. */
-  getSnapshot(): AppState;
+  getSnapshot: () => AppState;
   /** Subscribe to snapshot changes; returns an unsubscribe function. */
-  subscribe(listener: () => void): () => void;
-  dispatch(action: AppAction): void;
+  subscribe: (listener: () => void) => () => void;
+  dispatch: (action: AppAction) => void;
   /** Write any pending changes now. Safe to call from an exit handler. */
-  flush(): void;
+  flush: () => void;
+  /** Re-read from disk, discarding undo history. */
+  reload: () => void;
   /** Cancel timers and flush. */
-  dispose(): void;
+  dispose: () => void;
 }
 
 function buildSampleCards(now: Date): Flashcard[] {
@@ -157,6 +159,11 @@ export function createStore(options: StoreOptions = {}): Store {
     },
     dispatch,
     flush,
+    reload: () => {
+      flush();
+      state = createInitialState(repository.load().data);
+      notify();
+    },
     dispose: () => {
       flush();
       listeners.clear();

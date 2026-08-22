@@ -3,6 +3,13 @@
  * The executable lives in `cli/main.ts`.
  */
 export { createStore, type Store, type StoreOptions } from './state/store.js';
+export {
+  THEMES,
+  THEME_IDS,
+  getTheme,
+  type ThemeId,
+  type ThemePalette
+} from './ui/theme/palette.js';
 export { createInitialState, reduce, type AppState } from './state/reducer.js';
 export type { AppAction, UndoEntry } from './state/actions.js';
 export * as selectors from './state/selectors.js';

@@ -1,14 +1,88 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
-import { createAppStore, runInteractive, runStudyOnly } from './app.js';
 import { helpText, parseArgs } from './args.js';
+import { RUN_SCREEN_FLAG } from './subprocess.js';
 import { showError } from '../ui/messages.js';
+import type { Screen } from '../ui/screens/Screen.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
 
+/**
+ * Interactive mode only.
+ *
+ * Ink and React are reached through a dynamic import so `--help` and
+ * `--version` never load them: they cost roughly 200ms (~53ms without, ~260ms
+ * with). `tests/cli/startup-budget.test.ts` fails if a static import creeps in.
+ */
+async function runInteractive(studyOnly: boolean): Promise<number> {
+  if (!process.stdin.isTTY) {
+    showError('Terminal Anki needs an interactive terminal. Try `anki --help`.');
+    return 1;
+  }
+
+  const [{ createStore }, { start }, { runStudySession }] = await Promise.all([
+    import('../state/store.js'),
+    import('../ui/start.js'),
+    import('./legacy.js')
+  ]);
+
+  const store = createStore();
+
+  // Deferred writes must not be lost when the process is interrupted.
+  const flushAndExit = (code: number) => () => {
+    try {
+      store.flush();
+    } catch (error) {
+      showError(
+        `Could not save before exiting: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    process.exit(code);
+  };
+  process.once('SIGINT', flushAndExit(130));
+  process.once('SIGTERM', flushAndExit(143));
+
+  try {
+    await (studyOnly ? runStudySession(store) : start(store));
+  } finally {
+    store.dispose();
+  }
+  return 0;
+}
+
+/**
+ * Run a single screen and exit. Used only by the parent process while the
+ * interface is being ported; not a public flag.
+ */
+async function runSingleScreen(screen: Screen): Promise<number> {
+  if (!process.stdin.isTTY) {
+    showError('Terminal Anki needs an interactive terminal.');
+    return 1;
+  }
+
+  const [{ createStore }, { runLegacyScreen }] = await Promise.all([
+    import('../state/store.js'),
+    import('./legacy.js')
+  ]);
+
+  const store = createStore();
+  try {
+    await runLegacyScreen(store, screen);
+  } finally {
+    store.dispose();
+  }
+  return 0;
+}
+
 async function main(): Promise<number> {
-  const { command, unknown } = parseArgs(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+
+  if (argv[0] === RUN_SCREEN_FLAG && argv[1]) {
+    return runSingleScreen(argv[1] as Screen);
+  }
+
+  const { command, unknown } = parseArgs(argv);
 
   if (unknown.length > 0) {
     showError(`Unknown option(s): ${unknown.join(', ')}`);
@@ -24,32 +98,9 @@ async function main(): Promise<number> {
       console.log(version);
       return 0;
     case 'study':
-    case 'interactive': {
-      const store = createAppStore();
-
-      // Deferred writes must not be lost when the process is interrupted.
-      const flushAndExit = (code: number) => () => {
-        try {
-          store.flush();
-        } catch (error) {
-          showError(
-            `Could not save before exiting: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-        process.exit(code);
-      };
-      process.once('SIGINT', flushAndExit(130));
-      process.once('SIGTERM', flushAndExit(143));
-
-      try {
-        await (command === 'study' ? runStudyOnly(store) : runInteractive(store));
-      } finally {
-        store.dispose();
-      }
-      return 0;
-    }
+      return runInteractive(true);
+    case 'interactive':
+      return runInteractive(false);
   }
 }
 

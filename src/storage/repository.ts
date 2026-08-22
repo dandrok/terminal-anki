@@ -26,11 +26,11 @@ export interface RepositoryOptions {
 
 export interface Repository {
   readonly dataFile: string;
-  load(): LoadResult;
+  load: () => LoadResult;
   /** Write atomically. A no-op while the repository is read-only. */
-  save(data: PersistedData): void;
+  save: (data: PersistedData) => void;
   /** True when saving is disabled to avoid clobbering unrecoverable data. */
-  isReadOnly(): boolean;
+  isReadOnly: () => boolean;
 }
 
 /** Timestamped sibling path used to preserve a file we cannot parse. */
