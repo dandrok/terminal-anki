@@ -58,6 +58,9 @@ export function selectExtendedStats(state: AppState, now: Date = new Date()): Ex
   const sessions = state.data.sessionHistory;
   const completedSessions = sessions.filter(session => !session.quitEarly);
   const studyMinutes = totalStudyMinutes(sessions);
+  // Averaged over completed sessions only, so numerator and denominator agree.
+  // Dividing all-session minutes by the completed count inflated the figure.
+  const completedMinutes = totalStudyMinutes(completedSessions);
 
   return {
     ...computeCardStats(state.data.cards, now),
@@ -69,7 +72,7 @@ export function selectExtendedStats(state: AppState, now: Date = new Date()): Ex
     totalStudyTime: studyMinutes,
     sessionsCompleted: completedSessions.length,
     averageSessionLength:
-      completedSessions.length > 0 ? studyMinutes / completedSessions.length : 0,
+      completedSessions.length > 0 ? completedMinutes / completedSessions.length : 0,
     achievements: state.data.achievements,
     recentSessions: sessions.slice(-10),
     tagDistribution: tagDistribution(state.data.cards),

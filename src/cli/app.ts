@@ -102,24 +102,28 @@ async function runSession(
     }
   }
 
-  store.dispatch({
-    type: 'session/record',
-    now: new Date(),
-    session: {
-      startTime,
-      endTime: new Date(),
-      cardsStudied: studied,
-      correctAnswers,
-      incorrectAnswers: studied - correctAnswers,
-      averageDifficulty:
-        difficulties.length > 0
-          ? difficulties.reduce((sum, value) => sum + value, 0) / difficulties.length
-          : 0,
-      sessionType,
-      customFilters: filters ? { tags: filters.tags, difficulty: filters.difficulty } : undefined,
-      quitEarly
-    }
-  });
+  // Recording a session marks today as a study day and advances the streak.
+  // Quitting before grading anything is not studying, so it must not count.
+  if (studied > 0) {
+    store.dispatch({
+      type: 'session/record',
+      now: new Date(),
+      session: {
+        startTime,
+        endTime: new Date(),
+        cardsStudied: studied,
+        correctAnswers,
+        incorrectAnswers: studied - correctAnswers,
+        averageDifficulty:
+          difficulties.length > 0
+            ? difficulties.reduce((sum, value) => sum + value, 0) / difficulties.length
+            : 0,
+        sessionType,
+        customFilters: filters ? { tags: filters.tags, difficulty: filters.difficulty } : undefined,
+        quitEarly
+      }
+    });
+  }
 
   studyScreens.showSessionSummary({
     studied,

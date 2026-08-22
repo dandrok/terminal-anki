@@ -27,9 +27,13 @@ export function writePolicyFor(action: AppAction): WritePolicy {
     case 'session/record':
     case 'seed':
       return 'immediate';
+    // Undo can reverse a delete or an edit, both of which were written
+    // through. Deferring it would leave the reversal only in memory, so a
+    // crash inside the debounce window would resurrect the deletion.
+    case 'undo':
+      return 'immediate';
     case 'card/grade':
     case 'session/clearUndo':
-    case 'undo':
       return 'deferred';
   }
 }

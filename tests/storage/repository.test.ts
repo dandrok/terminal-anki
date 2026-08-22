@@ -72,11 +72,7 @@ describe('load with a corrupt file', () => {
   });
 
   it('refuses to write when the file could not be backed up', () => {
-    const repository = createRepository({
-      dataFile,
-      legacyFile: null,
-      onWarning: (message: string) => warnings.push(message)
-    });
+    const repository = repo();
     // Force the backup copy to fail by making the directory read-only.
     const original = fs.copyFileSync;
     (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = () => {
@@ -92,6 +88,27 @@ describe('load with a corrupt file', () => {
     } finally {
       (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = original;
     }
+  });
+});
+
+describe('load with valid JSON that is not a data file', () => {
+  it.each([
+    ['null', 'null'],
+    ['an array', '[1,2,3]'],
+    ['a number', '42'],
+    ['a string', '"hello"']
+  ])('treats %s as corrupt rather than as empty data', (_label, payload) => {
+    // These all parse successfully. Normalizing them would give an empty
+    // collection with isNew=false, so the next save would overwrite whatever
+    // the user actually had.
+    fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+    fs.writeFileSync(dataFile, payload);
+
+    const result = repo().load();
+    expect(result.corruptBackup).toBeDefined();
+    expect(fs.readFileSync(result.corruptBackup!, 'utf-8')).toBe(payload);
+    expect(result.isNew).toBe(true);
+    expect(warnings).toHaveLength(1);
   });
 });
 

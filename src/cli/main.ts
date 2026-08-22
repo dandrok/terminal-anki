@@ -29,7 +29,15 @@ async function main(): Promise<number> {
 
       // Deferred writes must not be lost when the process is interrupted.
       const flushAndExit = (code: number) => () => {
-        store.flush();
+        try {
+          store.flush();
+        } catch (error) {
+          showError(
+            `Could not save before exiting: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
         process.exit(code);
       };
       process.once('SIGINT', flushAndExit(130));

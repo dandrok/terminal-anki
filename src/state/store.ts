@@ -90,8 +90,17 @@ export function createStore(options: StoreOptions = {}): Store {
     if (pendingWrites === 0) {
       return;
     }
+
+    try {
+      repository.save(state.data);
+    } catch (error) {
+      // Keep the pending count and re-arm the timer: clearing it here would
+      // silently discard changes that never reached disk.
+      scheduleFlush();
+      throw error;
+    }
+
     pendingWrites = 0;
-    repository.save(state.data);
   };
 
   const scheduleFlush = (): void => {
@@ -114,18 +123,16 @@ export function createStore(options: StoreOptions = {}): Store {
     }
     state = next;
 
+    pendingWrites++;
+
     if (writePolicyFor(action) === 'immediate') {
-      pendingWrites++;
       flush();
-    } else {
-      pendingWrites++;
+    } else if (pendingWrites >= FLUSH_AFTER_ACTIONS) {
       // Bound worst-case loss by count as well as by time, so fast grading
       // cannot defer indefinitely.
-      if (pendingWrites >= FLUSH_AFTER_ACTIONS) {
-        flush();
-      } else {
-        scheduleFlush();
-      }
+      flush();
+    } else {
+      scheduleFlush();
     }
 
     notify();
@@ -137,9 +144,9 @@ export function createStore(options: StoreOptions = {}): Store {
   // unreadable data could not be preserved, so nothing is seeded over it either.
   if (result.isNew && seedSampleCards && !result.corruptBackup && !repository.isReadOnly()) {
     dispatch({ type: 'seed', cards: buildSampleCards(new Date()) });
-  } else if (result.migratedFrom) {
-    repository.save(state.data);
   }
+  // A migration is persisted by the repository's own load(), which owns copying
+  // the legacy file into its new home. Saving again here would double-write.
 
   return {
     dataFile: repository.dataFile,

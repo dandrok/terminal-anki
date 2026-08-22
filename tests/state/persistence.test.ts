@@ -6,22 +6,35 @@ import { selectCards } from '../../src/state/selectors.js';
 import type { Repository } from '../../src/storage/repository.js';
 import type { AppAction } from '../../src/state/actions.js';
 
-/** In-memory repository that counts writes. */
+/** In-memory repository that counts writes and can be made to fail once. */
 function fakeRepository() {
   const saves: number[] = [];
   let stored = emptyPersistedData();
+  let failNext: string | null = null;
 
   const repository: Repository = {
     dataFile: '/virtual/flashcards.json',
     load: () => ({ data: stored, isNew: false }),
     save: data => {
+      if (failNext !== null) {
+        const message = failNext;
+        failNext = null;
+        throw new Error(message);
+      }
       stored = data;
       saves.push(data.cards.length);
     },
     isReadOnly: () => false
   };
 
-  return { repository, saves, current: () => stored };
+  return {
+    repository,
+    saves,
+    current: () => stored,
+    failNextSave: (message: string) => {
+      failNext = message;
+    }
+  };
 }
 
 const NOW = new Date(2026, 7, 22, 12, 0);
@@ -32,12 +45,14 @@ describe('writePolicyFor', () => {
     ['card/edit', 'immediate'],
     ['card/delete', 'immediate'],
     ['session/record', 'immediate'],
-    ['seed', 'immediate']
+    ['seed', 'immediate'],
+    // Undo can reverse a delete or edit that already reached disk.
+    ['undo', 'immediate']
   ])('writes %s through immediately', (type, expected) => {
     expect(writePolicyFor({ type } as AppAction)).toBe(expected);
   });
 
-  it.each<AppAction['type']>(['card/grade', 'undo', 'session/clearUndo'])('defers %s', type => {
+  it.each<AppAction['type']>(['card/grade', 'session/clearUndo'])('defers %s', type => {
     expect(writePolicyFor({ type } as AppAction)).toBe('deferred');
   });
 });
@@ -137,6 +152,58 @@ describe('write batching', () => {
 
     expect(current().cards[0].repetitions).toBe(1);
     expect(saves.length).toBe(2);
+  });
+
+  it('retries after a failed write instead of dropping the data', () => {
+    // Clearing the pending count before the write succeeded would silently
+    // discard changes that never reached disk.
+    const { repository, saves, current, failNextSave } = fakeRepository();
+    failNextSave('disk full');
+
+    const store = createStore({ repository, seedSampleCards: false });
+    expect(() =>
+      store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW })
+    ).toThrow('disk full');
+    expect(saves.length).toBe(0);
+
+    // The data is still pending, so a later flush writes it.
+    store.flush();
+    expect(saves.length).toBe(1);
+    expect(current().cards).toHaveLength(1);
+  });
+
+  it('re-arms the debounce after a failed write', () => {
+    const { repository, saves, failNextSave } = fakeRepository();
+
+    const store = createStore({ repository, seedSampleCards: false });
+    store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW });
+    const id = selectCards(store.getSnapshot())[0].id;
+    const before = saves.length;
+
+    failNextSave('transient');
+    store.dispatch({ type: 'card/grade', id, quality: 3, now: NOW });
+    expect(() => vi.advanceTimersByTime(FLUSH_IDLE_MS)).toThrow('transient');
+    expect(saves.length).toBe(before);
+
+    // A re-armed timer means the retry lands without another dispatch.
+    vi.advanceTimersByTime(FLUSH_IDLE_MS);
+    expect(saves.length).toBe(before + 1);
+  });
+
+  it('writes an undo through immediately', () => {
+    // Undo can reverse a delete that was already on disk.
+    const { repository, saves, current } = fakeRepository();
+    const store = createStore({ repository, seedSampleCards: false });
+    store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW });
+    const id = selectCards(store.getSnapshot())[0].id;
+
+    store.dispatch({ type: 'card/delete', id });
+    expect(current().cards).toHaveLength(0);
+    const afterDelete = saves.length;
+
+    store.dispatch({ type: 'undo' });
+    expect(saves.length).toBe(afterDelete + 1);
+    expect(current().cards).toHaveLength(1);
   });
 
   it('flush is a no-op when nothing is pending', () => {

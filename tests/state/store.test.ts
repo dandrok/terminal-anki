@@ -182,13 +182,17 @@ describe('sessions', () => {
     expect(selectExtendedStats(s.getSnapshot()).learningStreak.currentStreak).toBe(1);
   });
 
-  it('caps stored history', () => {
+  it('caps stored history, and the cap survives persistence', () => {
     const s = store();
     for (let i = 0; i < MAX_SESSION_HISTORY + 10; i++) {
       s.dispatch(session());
     }
     s.flush();
-    expect(selectExtendedStats(store().getSnapshot()).recentSessions).toHaveLength(10);
+
+    // Asserting recentSessions here would prove nothing: it is slice(-10) and
+    // would read 10 even if the cap were removed entirely.
+    const reloaded = store().getSnapshot().data.sessionHistory;
+    expect(reloaded).toHaveLength(MAX_SESSION_HISTORY);
   });
 
   it('counts only completed sessions toward the session achievement', () => {
@@ -206,6 +210,23 @@ describe('sessions', () => {
     s.dispatch(session());
     const ids = s.getSnapshot().data.sessionHistory.map(entry => entry.id);
     expect(new Set(ids).size).toBe(2);
+  });
+});
+
+describe('session averages', () => {
+  it('averages only over completed sessions', () => {
+    // Dividing all-session minutes by the completed count inflated this.
+    const s = store();
+    const start = new Date(2026, 7, 22, 10, 0);
+    const tenMinutes = { startTime: start, endTime: new Date(start.getTime() + 10 * 60_000) };
+
+    s.dispatch(session({ ...tenMinutes, quitEarly: false }));
+    s.dispatch(session({ ...tenMinutes, quitEarly: true }));
+
+    const stats = selectExtendedStats(s.getSnapshot());
+    expect(stats.totalStudyTime).toBe(20); // all sessions
+    expect(stats.sessionsCompleted).toBe(1);
+    expect(stats.averageSessionLength).toBe(10); // completed only, was 20
   });
 });
 

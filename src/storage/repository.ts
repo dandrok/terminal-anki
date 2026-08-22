@@ -4,6 +4,9 @@ import { corruptBackupPath, legacyDataFile, resolveDataFile } from './paths.js';
 import { emptyPersistedData, normalizePersistedData } from './serialization.js';
 import type { PersistedData } from '../types/index.js';
 
+/** Distinguishes temp files when several repositories share a process. */
+let temporaryFileCounter = 0;
+
 export interface LoadResult {
   data: PersistedData;
   /** True when no data file existed and a fresh collection should be seeded. */
@@ -93,7 +96,11 @@ export function createRepository(options: RepositoryOptions = {}): Repository {
     const directory = path.dirname(dataFile);
     fs.mkdirSync(directory, { recursive: true });
 
-    const temporary = path.join(directory, `.${path.basename(dataFile)}.${process.pid}.tmp`);
+    temporaryFileCounter++;
+    const temporary = path.join(
+      directory,
+      `.${path.basename(dataFile)}.${process.pid}.${temporaryFileCounter}.tmp`
+    );
     try {
       fs.writeFileSync(temporary, JSON.stringify(data, null, 2), 'utf-8');
       fs.renameSync(temporary, dataFile);
@@ -114,6 +121,13 @@ export function createRepository(options: RepositoryOptions = {}): Repository {
     let parsed: unknown;
     try {
       parsed = JSON.parse(fs.readFileSync(source, 'utf-8'));
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        // `null`, `[]` and `42` all parse successfully but are not a data file.
+        // Normalizing them would yield an empty collection with isNew=false, so
+        // the next save would overwrite whatever the user actually had.
+        const found = Array.isArray(parsed) ? 'an array' : `a ${typeof parsed}`;
+        throw new Error(`expected a JSON object, found ${found}`);
+      }
     } catch (error) {
       // Never overwrite a file we failed to read: earlier versions replaced it
       // with sample cards, destroying the whole collection on a single bad

@@ -106,6 +106,29 @@ describe('undo of an edit', () => {
   });
 });
 
+describe('recording a session', () => {
+  it('marks a study day, which is why an empty session must not be recorded', () => {
+    // The guard lives in the caller (cli/app.ts): quitting before grading
+    // anything would otherwise advance the streak for doing no work.
+    const recorded = reduce(blank(), {
+      type: 'session/record',
+      now: NOW,
+      session: {
+        startTime: NOW,
+        endTime: NOW,
+        cardsStudied: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        averageDifficulty: 0,
+        sessionType: 'due',
+        quitEarly: true
+      }
+    });
+    expect(recorded.data.learningStreak.currentStreak).toBe(1);
+    expect(recorded.data.learningStreak.studyDates).toEqual(['2026-08-22']);
+  });
+});
+
 describe('undo stack', () => {
   it('is empty to begin with', () => {
     expect(selectCanUndo(blank())).toBe(false);
