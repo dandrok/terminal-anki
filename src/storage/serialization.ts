@@ -5,6 +5,7 @@ import { DEFAULT_EASINESS } from '../core/sm2.js';
 import { normalizeTags } from '../core/filters.js';
 import type {
   Achievement,
+  DifficultyLevel,
   Flashcard,
   LearningStreak,
   PersistedData,
@@ -90,6 +91,33 @@ export function normalizeCard(raw: unknown, seenIds: Set<string>): Flashcard | n
 
 const SESSION_TYPES: readonly SessionType[] = ['due', 'custom', 'all'];
 
+const DIFFICULTY_LEVELS: readonly DifficultyLevel[] = ['new', 'learning', 'young', 'mature'];
+
+/**
+ * Keep only the two fields a stored filter is allowed to have, each validated.
+ * The raw object used to be cast straight to the record type, so a hand-edited
+ * file could carry arbitrary values behind a type that claimed otherwise.
+ */
+function normalizeCustomFilters(raw: unknown): StudySessionRecord['customFilters'] {
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+
+  const tags = toArray(raw.tags).filter((tag): tag is string => typeof tag === 'string');
+  const difficulty = DIFFICULTY_LEVELS.includes(raw.difficulty as DifficultyLevel)
+    ? (raw.difficulty as DifficultyLevel)
+    : undefined;
+
+  if (tags.length === 0 && !difficulty) {
+    return undefined;
+  }
+
+  return {
+    ...(tags.length > 0 ? { tags: normalizeTags(tags) } : {}),
+    ...(difficulty ? { difficulty } : {})
+  };
+}
+
 export function normalizeSession(raw: unknown): StudySessionRecord | null {
   if (!isRecord(raw)) {
     return null;
@@ -118,7 +146,7 @@ export function normalizeSession(raw: unknown): StudySessionRecord | null {
     incorrectAnswers: cardsStudied - correctAnswers,
     averageDifficulty: toFiniteNumber(raw.averageDifficulty, 0),
     sessionType,
-    customFilters: isRecord(raw.customFilters) ? raw.customFilters : undefined,
+    customFilters: normalizeCustomFilters(raw.customFilters),
     quitEarly: raw.quitEarly === true
   };
 }

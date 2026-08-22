@@ -56,6 +56,18 @@ describe('tagDistribution', () => {
     const cards = [makeCard({ tags: ['a', 'b'] }), makeCard({ tags: ['a'] })];
     expect(tagDistribution(cards)).toEqual({ a: 2, b: 1 });
   });
+
+  it.each(['constructor', '__proto__', 'valueof', 'hasownproperty'])(
+    'counts a tag named %s as an ordinary key',
+    tag => {
+      // Tags are free user text. On a normal object literal, reading
+      // distribution['constructor'] returns the inherited function, so the
+      // count became a garbage string instead of a number.
+      const result = tagDistribution([makeCard({ tags: [tag] }), makeCard({ tags: [tag] })]);
+      expect(result[tag]).toBe(2);
+      expect(typeof result[tag]).toBe('number');
+    }
+  );
 });
 
 describe('totalStudyMinutes', () => {

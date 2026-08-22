@@ -72,8 +72,10 @@ export class FlashcardManager {
 
     // Sample cards seed a first run only. They are deliberately not re-created
     // when the collection is merely empty, which used to resurrect them every
-    // launch after the user deleted their last card.
-    if (result.isNew && seedSampleCards && !result.corruptBackup) {
+    // launch after the user deleted their last card. A read-only repository
+    // means unreadable data could not be preserved, so nothing is seeded over
+    // the top of it either.
+    if (result.isNew && seedSampleCards && !result.corruptBackup && !this.repository.isReadOnly) {
       this.seedSampleCards();
     } else if (result.migratedFrom) {
       this.save();

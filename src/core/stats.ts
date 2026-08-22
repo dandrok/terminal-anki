@@ -33,7 +33,9 @@ export function computeCardStats(cards: readonly Flashcard[], now: Date = new Da
 }
 
 export function tagDistribution(cards: readonly Flashcard[]): Record<string, number> {
-  const distribution: Record<string, number> = {};
+  // A null-prototype object: tags are user text, and a tag named `constructor`
+  // or `__proto__` would otherwise read an inherited value instead of a count.
+  const distribution: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const card of cards) {
     for (const tag of card.tags) {
       distribution[tag] = (distribution[tag] ?? 0) + 1;

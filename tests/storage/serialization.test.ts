@@ -94,6 +94,29 @@ describe('normalizePersistedData', () => {
   });
 });
 
+describe('normalizePersistedData customFilters', () => {
+  const withFilters = (customFilters: unknown) =>
+    normalizePersistedData({
+      sessionHistory: [{ startTime: '2026-08-20T10:00:00.000Z', customFilters }]
+    }).sessionHistory[0].customFilters;
+
+  it('keeps only valid tags and difficulty', () => {
+    expect(withFilters({ tags: ['A', 7, 'b'], difficulty: 'young', evil: 'x' })).toEqual({
+      tags: ['a', 'b'],
+      difficulty: 'young'
+    });
+  });
+
+  it('drops an invalid difficulty', () => {
+    expect(withFilters({ tags: ['a'], difficulty: 'bogus' })).toEqual({ tags: ['a'] });
+  });
+
+  it('returns undefined when nothing valid remains', () => {
+    expect(withFilters({ difficulty: 'bogus', junk: 1 })).toBeUndefined();
+    expect(withFilters('not an object')).toBeUndefined();
+  });
+});
+
 describe('normalizeStreak', () => {
   it('fills in missing fields on a partial streak', () => {
     // Regression: a stored streak without studyDates threw on .includes().

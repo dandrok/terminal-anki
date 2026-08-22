@@ -187,7 +187,7 @@ npm start -- --study
 
 Terminal Anki uses the **SM-2 (SuperMemo 2) algorithm**, the gold standard for spaced repetition learning:
 
-```
+```text
 📊 Learning Progression:
 New Card → 1 Day → 6 Days → 15 Days → 37 Days → 91 Days...
 ```
@@ -196,7 +196,7 @@ New Card → 1 Day → 6 Days → 15 Days → 37 Days → 91 Days...
 
 **Flexible Study Sessions:**
 
-```
+```text
 📚 15 cards due today
 
 Study options:
@@ -207,7 +207,7 @@ Study options:
 
 **Choose Session Length:**
 
-```
+```text
 ◐ Quick session (10 cards)
 ◈ Standard session (25 cards)
 ◆ Intensive session (50 cards)
@@ -217,7 +217,7 @@ Study options:
 
 **In-Session Controls:**
 
-```
+```text
 📝 Card 3/10
 Question: Python
 
@@ -229,7 +229,7 @@ Choose your action:
 
 **Step 1: Choose Action**
 
-```
+```text
 Choose your action:
 ❯ 📖 Show Answer
   ⏭️ Skip Card
@@ -238,7 +238,7 @@ Choose your action:
 
 **Step 2: Rate Difficulty (After Seeing Answer)**
 
-```
+```text
 How well did you know this?
 ❯ ❌ Again (0) - Show card soon
   🤔 Hard (1)
@@ -297,7 +297,7 @@ How well did you know this?
 
 **Choose viewing mode:**
 
-```
+```text
 📋 6 cards available
 
 How would you like to view your cards?
@@ -472,7 +472,7 @@ npm link
 The code is organised in layers. Each layer only depends on the ones below it,
 so the learning rules can be tested without a terminal or a filesystem.
 
-```
+```text
 terminal-anki/
 ├── src/
 │   ├── core/                    # Pure domain logic — no I/O, no UI
@@ -575,12 +575,14 @@ after changing them, run `npx simple-git-hooks`.
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
-| Job       | What it does                                                        |
-| --------- | ------------------------------------------------------------------- |
-| `quality` | Prettier, ESLint and `tsc --noEmit`                                 |
-| `test`    | Vitest with coverage on Node 22 and 24, plus macOS and Windows      |
-| `build`   | Compiles, smoke-tests the CLI, and verifies the packed npm contents |
-| `audit`   | `npm audit` on production dependencies                              |
+| Job      | What it does                                                        |
+| -------- | ------------------------------------------------------------------- |
+| `verify` | ESLint, `tsc --noEmit`, Prettier and the Vitest suite with coverage |
+| `build`  | Compiles, smoke-tests the CLI, and verifies the packed npm contents |
+| `audit`  | `npm audit` on production dependencies                              |
+
+All three jobs run on `ubuntu-latest` with Node 24, the project's minimum
+supported version. macOS and Windows are not covered.
 
 `.github/workflows/release.yml` runs on a `v*.*.*` tag: it re-runs the full check
 suite, verifies the tag matches `package.json`, then publishes to npm with

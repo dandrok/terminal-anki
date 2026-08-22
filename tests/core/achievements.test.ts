@@ -23,6 +23,15 @@ const find = (list: ReturnType<typeof createAchievements>, id: string) =>
   list.find(achievement => achievement.id === id)!;
 
 describe('createAchievements', () => {
+  it('does not leak the internal measure function onto achievements', () => {
+    // Spreading the rest of a definition used to hang `measure` off every
+    // Achievement object.
+    for (const achievement of createAchievements()) {
+      expect(Object.keys(achievement)).not.toContain('measure');
+      expect(Object.values(achievement).some(v => typeof v === 'function')).toBe(false);
+    }
+  });
+
   it('starts every achievement locked with zero progress', () => {
     const achievements = createAchievements();
     expect(achievements).toHaveLength(ACHIEVEMENT_IDS.length);
@@ -102,6 +111,14 @@ describe('evaluateAchievements', () => {
   it('rebuilds achievements that are missing from stored data', () => {
     const result = evaluateAchievements([], context({ totalCards: 1 }), NOW);
     expect(result).toHaveLength(ACHIEVEMENT_IDS.length);
+  });
+
+  it('unlocks from retained progress even when this run measures lower', () => {
+    const stored = createAchievements().map(a =>
+      a.id === 'streak_7' ? { ...a, progress: { ...a.progress, current: 7 } } : a
+    );
+    const result = evaluateAchievements(stored, context({ currentStreak: 0 }), NOW);
+    expect(find(result, 'streak_7').unlockedAt).toEqual(NOW);
   });
 
   it('does not mutate the list it is given', () => {

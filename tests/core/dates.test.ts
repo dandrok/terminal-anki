@@ -1,11 +1,21 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { daysBetween, startOfDay, toDateKey } from '../../src/core/dates.js';
 
+function restoreTz(original: string | undefined): void {
+  if (original === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = original;
+  }
+}
+
 describe('toDateKey', () => {
   const originalTz = process.env.TZ;
 
   afterEach(() => {
-    process.env.TZ = originalTz;
+    // Assigning `undefined` would set the literal string "undefined", which
+    // Node treats as an invalid zone and silently falls back to UTC.
+    restoreTz(originalTz);
   });
 
   it.each([
@@ -53,9 +63,12 @@ describe('daysBetween', () => {
 
   it('survives a daylight-saving transition', () => {
     const originalTz = process.env.TZ;
-    process.env.TZ = 'Europe/Warsaw';
-    // DST ends 2026-10-25 in Warsaw; that day is 25 hours long.
-    expect(daysBetween(new Date(2026, 9, 24), new Date(2026, 9, 26))).toBe(2);
-    process.env.TZ = originalTz;
+    try {
+      process.env.TZ = 'Europe/Warsaw';
+      // DST ends 2026-10-25 in Warsaw; that day is 25 hours long.
+      expect(daysBetween(new Date(2026, 9, 24), new Date(2026, 9, 26))).toBe(2);
+    } finally {
+      restoreTz(originalTz);
+    }
   });
 });

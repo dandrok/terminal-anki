@@ -108,6 +108,23 @@ describe('sample cards', () => {
   });
 });
 
+describe('read-only repository', () => {
+  it('does not seed sample cards over data it could not preserve', () => {
+    fs.writeFileSync(dataFile, '{ broken json');
+    const copyFileSync = fs.copyFileSync;
+    (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = () => {
+      throw new Error('denied');
+    };
+    try {
+      const app = new FlashcardManager({ dataFile, legacyFile: null, onWarning: () => undefined });
+      expect(app.getAllCards()).toEqual([]);
+      expect(fs.readFileSync(dataFile, 'utf-8')).toBe('{ broken json');
+    } finally {
+      (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = copyFileSync;
+    }
+  });
+});
+
 describe('reviewCard', () => {
   it('persists the new schedule', () => {
     const app = manager();

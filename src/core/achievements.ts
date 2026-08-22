@@ -104,7 +104,9 @@ export const ACHIEVEMENT_IDS = DEFINITIONS.map(definition => definition.id);
 
 /** The full achievement list in its locked, zero-progress state. */
 export function createAchievements(): Achievement[] {
-  return DEFINITIONS.map(({ required, progressDescription, ...rest }) => ({
+  // `measure` must be dropped too: spreading the rest of a definition would
+  // otherwise hang a function off every Achievement object.
+  return DEFINITIONS.map(({ required, progressDescription, measure: _measure, ...rest }) => ({
     ...rest,
     progress: { current: 0, required, description: progressDescription }
   }));
@@ -134,7 +136,9 @@ export function evaluateAchievements(
       definition.required,
       Math.max(measured, previous?.progress.current ?? 0)
     );
-    const unlockedAt = previous?.unlockedAt ?? (measured >= definition.required ? now : undefined);
+    // Compare against the retained peak, so progress already at the target
+    // unlocks even when this run measures lower.
+    const unlockedAt = previous?.unlockedAt ?? (current >= definition.required ? now : undefined);
 
     return {
       id: definition.id,

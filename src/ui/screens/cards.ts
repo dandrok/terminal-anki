@@ -1,6 +1,7 @@
 import { chalk, heading, icons, muted, rule, truncate } from '../theme.js';
 import { CANCELLED, pressBack, select, text, wasCancelled } from '../prompts.js';
 import { isDue } from '../../core/sm2.js';
+import { MS_PER_DAY } from '../../core/dates.js';
 import type { Flashcard } from '../../types/index.js';
 
 export interface NewCardInput {
@@ -10,9 +11,14 @@ export interface NewCardInput {
 }
 
 function scheduleLabel(card: Flashcard, now = new Date()): string {
-  return isDue(card, now)
-    ? chalk.red(`${icons.due} Due`)
-    : chalk.green(`${icons.scheduled} In ${card.interval} days`);
+  if (isDue(card, now)) {
+    return chalk.red(`${icons.due} Due`);
+  }
+  // Count from nextReview rather than `interval`: the interval is the gap set
+  // at review time, so a card reviewed days ago would report the full gap
+  // instead of the days actually left.
+  const days = Math.max(1, Math.ceil((card.nextReview.getTime() - now.getTime()) / MS_PER_DAY));
+  return chalk.green(`${icons.scheduled} In ${days} ${days === 1 ? 'day' : 'days'}`);
 }
 
 export async function addCardForm(): Promise<NewCardInput | null> {
