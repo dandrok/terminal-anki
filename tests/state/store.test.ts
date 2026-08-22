@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type Store } from '../../src/state/store.js';
+import { emptyPersistedData } from '../../src/storage/serialization.js';
 import { MAX_SESSION_HISTORY } from '../../src/state/reducer.js';
 import {
   selectCards,
@@ -200,8 +201,23 @@ describe('sessions', () => {
     expect(selectExtendedStats(s.getSnapshot()).learningStreak.currentStreak).toBe(1);
   });
 
-  it('caps stored history, and the cap survives persistence', () => {
-    const s = store();
+  it('caps stored history', () => {
+    // Through an in-memory repository rather than the workspace file. Recording
+    // a session writes through immediately, so filling the cap on real disk
+    // rewrites a growing file MAX_SESSION_HISTORY + 10 times over — tens of
+    // megabytes of I/O to prove something the reducer decides on its own.
+    let saved = emptyPersistedData();
+    const s = makeStore({
+      repository: {
+        dataFile,
+        load: () => ({ data: saved, isNew: false }),
+        save: data => {
+          saved = data;
+        },
+        isReadOnly: () => false
+      }
+    });
+
     for (let i = 0; i < MAX_SESSION_HISTORY + 10; i++) {
       s.dispatch(session());
     }
@@ -209,8 +225,17 @@ describe('sessions', () => {
 
     // Asserting recentSessions here would prove nothing: it is slice(-10) and
     // would read 10 even if the cap were removed entirely.
+    expect(saved.sessionHistory).toHaveLength(MAX_SESSION_HISTORY);
+  });
+
+  it('reloads the sessions it wrote', () => {
+    const s = store();
+    s.dispatch(session({ cardsStudied: 7 }));
+    s.dispatch(session({ cardsStudied: 9 }));
+    s.flush();
+
     const reloaded = store().getSnapshot().data.sessionHistory;
-    expect(reloaded).toHaveLength(MAX_SESSION_HISTORY);
+    expect(reloaded.map(entry => entry.cardsStudied)).toEqual([7, 9]);
   });
 
   it('counts only completed sessions toward the session achievement', () => {

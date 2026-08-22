@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { TextField, applyKey, DEFAULT_MAX_LENGTH } from '../components/TextField.js';
@@ -54,25 +54,49 @@ export function CardForm({ card, onSave, onCancel }: CardFormProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
 
-  const [values, setValues] = useState<Record<Field, string>>(() => ({
-    front: card?.front ?? '',
-    back: card?.back ?? '',
-    tags: card?.tags.join(', ') ?? ''
-  }));
+  const initial = useMemo<Record<Field, string>>(
+    () => ({
+      front: card?.front ?? '',
+      back: card?.back ?? '',
+      tags: card?.tags.join(', ') ?? ''
+    }),
+    [card]
+  );
+
+  const [values, setValues] = useState(initial);
   const [fieldIndex, setFieldIndex] = useState(0);
 
-  const field = FIELDS[fieldIndex];
+  /**
+   * The form as it stands mid-chunk.
+   *
+   * Ink hands over everything that arrived in one read as a single string, so
+   * typing quickly — or pasting — delivers "abc" or even "front\rback\r" at
+   * once, and every keystroke in it is processed before React commits any of
+   * them. Reading `values` from the render closure therefore saw the same stale
+   * form for each character and kept only the last one. The handler is the only
+   * writer of either piece of state, so this ref and the state stay in step.
+   */
+  const draft = useRef({ values: initial, fieldIndex: 0 });
+
   const isValid = values.front.trim().length > 0 && values.back.trim().length > 0;
 
-  const save = (): void => {
-    if (!isValid) {
-      return;
+  /** Returns whether it saved, so the caller knows the screen is going away. */
+  const save = (): boolean => {
+    const pending = draft.current.values;
+    if (pending.front.trim().length === 0 || pending.back.trim().length === 0) {
+      return false;
     }
     onSave({
-      front: values.front.trim(),
-      back: values.back.trim(),
-      tags: values.tags.split(',')
+      front: pending.front.trim(),
+      back: pending.back.trim(),
+      tags: pending.tags.split(',')
     });
+    return true;
+  };
+
+  const moveTo = (index: number): void => {
+    draft.current.fieldIndex = (index + FIELDS.length) % FIELDS.length;
+    setFieldIndex(draft.current.fieldIndex);
   };
 
   useScreenInput({
@@ -84,29 +108,33 @@ export function CardForm({ card, onSave, onCancel }: CardFormProps) {
     onKey: (stroke, key) => {
       // Ink reports this as input "s" with ctrl set.
       if (key.ctrl && stroke === 's') {
-        save();
-        return true;
+        return save();
       }
+      // Moves do not stop the chunk: the draft ref already carries the new
+      // field, so a pasted "front⏎back⏎tags⏎" fills the whole form in one go
+      // instead of stopping dead after the first return. Only a successful save
+      // stops, because by then the screen is gone.
       if (key.upArrow) {
-        setFieldIndex((fieldIndex - 1 + FIELDS.length) % FIELDS.length);
-        return true;
+        moveTo(draft.current.fieldIndex - 1);
+        return false;
       }
       if (key.downArrow || key.tab) {
-        setFieldIndex((fieldIndex + 1) % FIELDS.length);
-        return true;
+        moveTo(draft.current.fieldIndex + 1);
+        return false;
       }
       if (key.return || isConfirm(stroke)) {
-        if (fieldIndex === FIELDS.length - 1) {
-          save();
-        } else {
-          setFieldIndex(fieldIndex + 1);
+        if (draft.current.fieldIndex === FIELDS.length - 1) {
+          return save();
         }
-        return true;
+        moveTo(draft.current.fieldIndex + 1);
+        return false;
       }
 
-      const next = applyKey(values[field], stroke, key, DEFAULT_MAX_LENGTH);
-      if (next !== values[field]) {
-        setValues({ ...values, [field]: next });
+      const active = FIELDS[draft.current.fieldIndex];
+      const next = applyKey(draft.current.values[active], stroke, key, DEFAULT_MAX_LENGTH);
+      if (next !== draft.current.values[active]) {
+        draft.current.values = { ...draft.current.values, [active]: next };
+        setValues(draft.current.values);
       }
       return false;
     }

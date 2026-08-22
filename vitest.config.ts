@@ -11,6 +11,7 @@ export default defineConfig({
         'src/core/**',
         'src/storage/**',
         'src/state/**',
+        'src/ui/charts/**',
         'src/services/**',
         'src/cli/args.ts'
       ],

@@ -8,7 +8,7 @@ import type { Flashcard, PersistedData } from '../types/index.js';
 import type { AppAction, UndoEntry } from './actions.js';
 
 /** Sessions kept in history; older ones are dropped. */
-export const MAX_SESSION_HISTORY = 100;
+export const MAX_SESSION_HISTORY = 1000;
 
 /** How many actions can be undone within a run. */
 export const MAX_UNDO_DEPTH = 20;

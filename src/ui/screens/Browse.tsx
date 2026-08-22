@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.js';
@@ -29,6 +29,17 @@ const FILTER_CONTROLS: Control[] = screenControls([
   { key: '⏎', label: 'done', description: 'Keep the filter and return to the list' }
 ]);
 
+/**
+ * While the delete prompt is up, only these keys do anything.
+ *
+ * The footer used to keep listing the browse keys, so it advertised j, k, e and
+ * u at the exact moment none of them worked.
+ */
+const CONFIRM_CONTROLS: Control[] = screenControls([
+  { key: 'y', label: 'delete', description: 'Delete the card for good' },
+  { key: 'n', label: 'keep', description: 'Keep the card and return to the list' }
+]);
+
 export interface BrowseProps {
   onBack: () => void;
   onEdit: (card: Flashcard) => void;
@@ -53,11 +64,25 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
   const clamped = Math.min(index, Math.max(0, cards.length - 1));
   const card = cards[clamped];
 
+  /**
+   * The filter text as it stands mid-chunk.
+   *
+   * Ink hands over everything that arrived in one read at once, so typing
+   * quickly delivers several characters in a single callback and none of them
+   * are committed while the rest are handled. Folding each one into the render
+   * closure's `query` kept only the last character typed.
+   */
+  const pendingQuery = useRef(query);
+
   const move = (delta: number): void => {
     if (cards.length === 0) {
       return;
     }
-    setIndex((clamped + delta + cards.length) % cards.length);
+    // Off the pending index, so "jjj" in one chunk moves three rows.
+    setIndex(current => {
+      const from = Math.min(current, Math.max(0, cards.length - 1));
+      return (from + delta + cards.length) % cards.length;
+    });
     setRevealed(false);
   };
 
@@ -100,8 +125,9 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
           setFiltering(false);
           return true;
         }
-        const next = applyKey(query, stroke, key, 60);
-        if (next !== query) {
+        const next = applyKey(pendingQuery.current, stroke, key, 60);
+        if (next !== pendingQuery.current) {
+          pendingQuery.current = next;
           setQuery(next);
           setIndex(0);
         }
@@ -113,7 +139,7 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
       } else if (key.downArrow || stroke === 'j') {
         move(1);
       } else if (key.return) {
-        setRevealed(!revealed);
+        setRevealed(current => !current);
       } else if (stroke === '/') {
         setFiltering(true);
       } else if (stroke === 'e' && card) {
@@ -132,7 +158,7 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
 
   if (confirming && card) {
     return (
-      <Layout title="□ Browse" status={status} controls={BROWSE_CONTROLS} isHelpOpen={isHelpOpen}>
+      <Layout title="□ Browse" status={status} controls={CONFIRM_CONTROLS} isHelpOpen={isHelpOpen}>
         <ConfirmDialog
           question="Delete this card?"
           detail={truncate(card.front, 50)}

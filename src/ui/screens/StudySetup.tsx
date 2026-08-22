@@ -68,14 +68,18 @@ export function StudySetup({ dueCount, onStart, onCancel, onQuit }: StudySetupPr
         onStart(clamp(custom));
         return true;
       }
+      // Stepped through the current value rather than the rendered one: Ink
+      // delivers a fast "lll" as one chunk, and reading `custom` from the
+      // render closure moved the number by one instead of three.
+      const step = (delta: number) => setCustom(current => clamp((current ?? 0) + delta));
       if (key.leftArrow || stroke === 'h') {
-        setCustom(clamp(custom - 1));
+        step(-1);
       } else if (key.rightArrow || stroke === 'l') {
-        setCustom(clamp(custom + 1));
+        step(1);
       } else if (key.downArrow || stroke === 'j') {
-        setCustom(clamp(custom - 10));
+        step(-10);
       } else if (key.upArrow || stroke === 'k') {
-        setCustom(clamp(custom + 10));
+        step(10);
       }
       return false;
     }

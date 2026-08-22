@@ -100,7 +100,12 @@ export function StudyFlow({ onExit, onQuit, mode = 'due' }: StudyFlowProps) {
     );
   }
 
-  if (due.length === 0) {
+  // Only the *setup* step needs due cards, and only for a due session — the
+  // custom branch above has already returned by here. Guarding the whole render
+  // meant a custom session over all cards started and was then replaced by
+  // "nothing due" on the very next frame, so the one route that is meant to
+  // work when nothing is due was the one that could not.
+  if (phase.name === 'setup' && due.length === 0) {
     return <NothingDue onDone={onExit} onQuit={onQuit} />;
   }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { screenControls, type Control } from '../controls.js';
@@ -53,6 +53,16 @@ export function CustomStudySetup({
   const [limitIndex, setLimitIndex] = useState(0);
   const [randomOrder, setRandomOrder] = useState(true);
 
+  /**
+   * Which row and tag the keys are acting on, mid-chunk.
+   *
+   * Ink delivers everything that arrived in one read at once, so "jl" is a
+   * single callback and React has not committed the row move by the time the
+   * `l` is handled. Reading the row from the render closure changed the filter
+   * the cursor had just left.
+   */
+  const cursor = useRef({ fieldIndex: 0, tagIndex: 0 });
+
   const field: Field = FIELDS[fieldIndex];
   const difficulty = DIFFICULTIES[difficultyIndex];
   const limit = LIMITS[limitIndex];
@@ -67,38 +77,42 @@ export function CustomStudySetup({
 
   const matches = matchCount(filters);
 
+  const move = (delta: number): void => {
+    cursor.current.fieldIndex = (cursor.current.fieldIndex + delta + FIELDS.length) % FIELDS.length;
+    setFieldIndex(cursor.current.fieldIndex);
+  };
+
   const cycle = (delta: number): void => {
     const wrap = (value: number, length: number) => (value + delta + length) % length;
-    switch (field) {
+    switch (FIELDS[cursor.current.fieldIndex]) {
       case 'scope':
-        setDueOnly(!dueOnly);
+        setDueOnly(current => !current);
         break;
       case 'tags':
         if (allTags.length > 0) {
-          setTagIndex(wrap(tagIndex, allTags.length));
+          cursor.current.tagIndex = wrap(cursor.current.tagIndex, allTags.length);
+          setTagIndex(cursor.current.tagIndex);
         }
         break;
       case 'difficulty':
-        setDifficultyIndex(wrap(difficultyIndex, DIFFICULTIES.length));
+        setDifficultyIndex(current => wrap(current, DIFFICULTIES.length));
         break;
       case 'limit':
-        setLimitIndex(wrap(limitIndex, LIMITS.length));
+        setLimitIndex(current => wrap(current, LIMITS.length));
         break;
       case 'order':
-        setRandomOrder(!randomOrder);
+        setRandomOrder(current => !current);
         break;
     }
   };
 
   const toggleTag = (): void => {
-    const tag = allTags[tagIndex];
-    if (field !== 'tags' || !tag) {
+    const tag = allTags[cursor.current.tagIndex];
+    if (FIELDS[cursor.current.fieldIndex] !== 'tags' || !tag) {
       return;
     }
-    setSelectedTags(
-      selectedTags.includes(tag)
-        ? selectedTags.filter(entry => entry !== tag)
-        : [...selectedTags, tag]
+    setSelectedTags(current =>
+      current.includes(tag) ? current.filter(entry => entry !== tag) : [...current, tag]
     );
   };
 
@@ -118,9 +132,9 @@ export function CustomStudySetup({
         return true;
       }
       if (key.upArrow || stroke === 'k') {
-        setFieldIndex((fieldIndex - 1 + FIELDS.length) % FIELDS.length);
+        move(-1);
       } else if (key.downArrow || stroke === 'j') {
-        setFieldIndex((fieldIndex + 1) % FIELDS.length);
+        move(1);
       } else if (key.leftArrow || stroke === 'h') {
         cycle(-1);
       } else if (key.rightArrow || stroke === 'l') {

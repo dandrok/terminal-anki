@@ -26,6 +26,14 @@ export interface ThemePalette {
   learning: InkColor;
   young: InkColor;
   mature: InkColor;
+  /**
+   * Heatmap shades for levels 1-4; level 0 uses `muted`.
+   *
+   * Part of the theme rather than hard-coded green, so the grid belongs to the
+   * scheme the rest of the app is drawn in — and so the monochrome theme gets a
+   * ramp that actually reads.
+   */
+  heat: readonly [InkColor, InkColor, InkColor, InkColor];
 }
 
 export const THEMES = {
@@ -41,7 +49,8 @@ export const THEMES = {
     new: 'yellow',
     learning: 'cyan',
     young: 'green',
-    mature: 'magenta'
+    mature: 'magenta',
+    heat: ['green', 'green', 'greenBright', 'greenBright']
   },
   forest: {
     label: 'Forest',
@@ -55,7 +64,8 @@ export const THEMES = {
     new: 'yellowBright',
     learning: 'cyan',
     young: 'green',
-    mature: 'blueBright'
+    mature: 'blueBright',
+    heat: ['green', 'green', 'greenBright', 'greenBright']
   },
   mono: {
     label: 'Monochrome',
@@ -69,7 +79,8 @@ export const THEMES = {
     new: 'gray',
     learning: 'gray',
     young: 'white',
-    mature: 'whiteBright'
+    mature: 'whiteBright',
+    heat: ['gray', 'white', 'white', 'whiteBright']
   },
   dracula: {
     label: 'Dracula',
@@ -83,7 +94,8 @@ export const THEMES = {
     new: 'yellow',
     learning: 'cyan',
     young: 'green',
-    mature: 'magentaBright'
+    mature: 'magentaBright',
+    heat: ['magenta', 'magenta', 'magentaBright', 'magentaBright']
   }
 } as const satisfies Record<string, ThemePalette>;
 

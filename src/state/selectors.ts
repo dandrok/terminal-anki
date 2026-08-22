@@ -13,6 +13,7 @@ import {
   weeklyProgress
 } from '../core/stats.js';
 import { effectiveStreak } from '../core/streaks.js';
+import { dailyRollups, rollupAccuracy, type DailyRollup } from '../core/rollups.js';
 import type {
   CardStats,
   CustomStudyFilters,
@@ -78,4 +79,38 @@ export function selectExtendedStats(state: AppState, now: Date = new Date()): Ex
     tagDistribution: tagDistribution(state.data.cards),
     weeklyProgress: weeklyProgress(sessions, now)
   };
+}
+
+/** Per-day study totals, derived from the session log. */
+export const selectDailyRollups = (state: AppState): Map<string, DailyRollup> =>
+  dailyRollups(state.data.sessionHistory);
+
+/** Just the card counts, in the shape the heatmap wants. */
+export function selectDailyCardCounts(state: AppState): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const [date, rollup] of selectDailyRollups(state)) {
+    counts.set(date, rollup.cardsStudied);
+  }
+  return counts;
+}
+
+/**
+ * Accuracy per day, most recent last, for days that had any study.
+ *
+ * Days with no reviews are left out rather than plotted as 0%: a rest day is
+ * not a day you got everything wrong.
+ */
+export function selectAccuracyTrend(
+  state: AppState,
+  days = 14
+): { date: string; accuracy: number; cards: number }[] {
+  return [...selectDailyRollups(state).values()]
+    .filter(rollup => rollup.cardsStudied > 0)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-days)
+    .map(rollup => ({
+      date: rollup.date,
+      accuracy: rollupAccuracy([rollup]),
+      cards: rollup.cardsStudied
+    }));
 }
