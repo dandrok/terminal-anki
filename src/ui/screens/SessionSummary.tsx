@@ -1,13 +1,13 @@
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
-import { HELP_CONTROL, type Control } from '../controls.js';
+import { screenControls } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 
-const SUMMARY_CONTROLS: Control[] = [
-  { key: '⏎/esc', label: 'menu', description: 'Return to the main menu' },
-  HELP_CONTROL
-];
+const SUMMARY_CONTROLS = screenControls([
+  { key: '⏎', label: 'menu', description: 'Return to the main menu' }
+]);
 
 export interface SessionSummaryProps {
   studied: number;
@@ -16,6 +16,7 @@ export interface SessionSummaryProps {
   remainingDue: number;
   quitEarly: boolean;
   onDone: () => void;
+  onQuit: () => void;
 }
 
 /**
@@ -30,19 +31,23 @@ export function SessionSummary({
   skipped,
   remainingDue,
   quitEarly,
-  onDone
+  onDone,
+  onQuit
 }: SessionSummaryProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-    } else if (key.return || key.escape || input === 'q' || input === ' ') {
-      onDone();
+  useScreenInput({
+    isHelpOpen,
+    toggleHelp,
+    onBack: onDone,
+    onQuit,
+    onKey: (stroke, key) => {
+      if (key.return || stroke === ' ') {
+        onDone();
+        return true;
+      }
+      return false;
     }
   });
 

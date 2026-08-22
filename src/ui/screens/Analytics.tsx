@@ -1,6 +1,7 @@
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { READONLY_CONTROLS } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState } from '../hooks/useStore.js';
@@ -9,23 +10,15 @@ import { sessionAccuracy } from '../../core/stats.js';
 
 export interface AnalyticsProps {
   onBack: () => void;
+  onQuit: () => void;
 }
 
-export function Analytics({ onBack }: AnalyticsProps) {
+export function Analytics({ onBack, onQuit }: AnalyticsProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
   const stats = selectExtendedStats(useAppState());
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-    } else if (key.escape || input === 'q') {
-      onBack();
-    }
-  });
+  useScreenInput({ isHelpOpen, toggleHelp, onBack, onQuit });
 
   const tags = Object.entries(stats.tagDistribution).sort(([, a], [, b]) => b - a);
   const recent = [...stats.recentSessions].slice(-5).reverse();

@@ -7,29 +7,76 @@ export interface Control {
   description: string;
 }
 
-/** Appended to every screen's controls so help documents itself. */
+/**
+ * The keys every screen answers to, in a fixed order.
+ *
+ * Appended by `screenControls` rather than written out per screen, so the tail
+ * of the footer strip is identical everywhere and cannot drift.
+ *
+ * There is exactly one rule: `q` and `esc` leave whatever you are currently in.
+ * On a sub-screen that means going back a step; on the menu, which is the
+ * outermost thing, it means quitting. Making `q` quit the application outright
+ * was worse — pressing the obvious "I am done" key mid-session closed the whole
+ * app instead of showing the session summary.
+ *
+ * Ctrl+C still quits from anywhere, and flushes on the way out.
+ */
+export const BACK_CONTROL: Control = {
+  key: 'q/esc',
+  label: 'back',
+  description: 'Leave this screen and go back a step'
+};
+
 export const HELP_CONTROL: Control = {
   key: '?',
   label: 'help',
   description: 'Show what each key on this screen does'
 };
 
-export const BACK_CONTROL: Control = {
-  key: 'esc',
-  label: 'back',
-  description: 'Return to the previous screen'
+/** The menu is the outermost screen, so leaving it quits. */
+export const ROOT_QUIT_CONTROL: Control = {
+  key: 'q/esc',
+  label: 'quit',
+  description: 'Quit Terminal Anki'
 };
 
-export const MENU_CONTROLS: Control[] = [
-  { key: '↑↓/jk', label: 'move', description: 'Move between menu entries' },
-  { key: '⏎', label: 'select', description: 'Open the highlighted entry' },
-  { key: 'q', label: 'quit', description: 'Exit Terminal Anki' },
-  HELP_CONTROL
-];
+export const MOVE_CONTROL: Control = {
+  key: '↑↓/jk',
+  label: 'move',
+  description: 'Move the selection'
+};
 
-export const READONLY_CONTROLS: Control[] = [BACK_CONTROL, HELP_CONTROL];
+export const SELECT_CONTROL: Control = {
+  key: '⏎',
+  label: 'select',
+  description: 'Open the highlighted entry'
+};
+
+export interface ScreenControlOptions {
+  /** Root screens have nowhere to go back to. */
+  isRoot?: boolean;
+}
+
+/**
+ * Screen-specific keys followed by the standard tail.
+ *
+ * Every footer therefore ends `… [q/esc] back [?] help`, so moving between
+ * screens never changes where the navigation keys are or what they do.
+ */
+export function screenControls(
+  specific: readonly Control[] = [],
+  options: ScreenControlOptions = {}
+): Control[] {
+  return [...specific, options.isRoot ? ROOT_QUIT_CONTROL : BACK_CONTROL, HELP_CONTROL];
+}
 
 /** Every key a screen binds, for conflict checking. */
 export function keysOf(controls: readonly Control[]): string[] {
   return controls.map(control => control.key);
 }
+
+export const MENU_CONTROLS: Control[] = screenControls([MOVE_CONTROL, SELECT_CONTROL], {
+  isRoot: true
+});
+
+export const READONLY_CONTROLS: Control[] = screenControls();

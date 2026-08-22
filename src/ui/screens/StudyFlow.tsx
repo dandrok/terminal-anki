@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { StudySetup } from './StudySetup.js';
 import { Study, type SessionResult } from './Study.js';
 import { SessionSummary } from './SessionSummary.js';
 import { READONLY_CONTROLS } from '../controls.js';
+import { useHelp } from '../hooks/useHelp.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState, useDispatch } from '../hooks/useStore.js';
 import { selectDueCards } from '../../state/selectors.js';
@@ -16,17 +18,16 @@ type Phase =
   | { name: 'studying'; cards: readonly Flashcard[] }
   | { name: 'summary'; result: SessionResult; skipped: number };
 
-function NothingDue({ onDone }: { onDone: () => void }) {
+function NothingDue({ onDone, onQuit }: { onDone: () => void; onQuit: () => void }) {
   const theme = useTheme();
-  useInput(() => {
-    onDone();
-  });
+  const { isHelpOpen, toggleHelp } = useHelp();
+  // Previously fired on *any* key, so `?` exited instead of opening help.
+  useScreenInput({ isHelpOpen, toggleHelp, onBack: onDone, onQuit });
 
   return (
-    <Layout title="◆ Study" controls={READONLY_CONTROLS}>
+    <Layout title="◆ Study" controls={READONLY_CONTROLS} isHelpOpen={isHelpOpen}>
       <Box flexDirection="column">
         <Text color={theme.success}>No cards due for review.</Text>
-        <Text color={theme.muted}>Press any key to go back.</Text>
       </Box>
     </Layout>
   );
@@ -34,6 +35,7 @@ function NothingDue({ onDone }: { onDone: () => void }) {
 
 export interface StudyFlowProps {
   onExit: () => void;
+  onQuit: () => void;
 }
 
 /**
@@ -42,7 +44,7 @@ export interface StudyFlowProps {
  * Kept as one component rather than three routes so the session's cards and
  * counters never have to be lifted into the router.
  */
-export function StudyFlow({ onExit }: StudyFlowProps) {
+export function StudyFlow({ onExit, onQuit }: StudyFlowProps) {
   const state = useAppState();
   const dispatch = useDispatch();
   const [phase, setPhase] = useState<Phase>({ name: 'setup' });
@@ -78,7 +80,7 @@ export function StudyFlow({ onExit }: StudyFlowProps) {
   };
 
   if (due.length === 0) {
-    return <NothingDue onDone={onExit} />;
+    return <NothingDue onDone={onExit} onQuit={onQuit} />;
   }
 
   switch (phase.name) {
@@ -86,6 +88,7 @@ export function StudyFlow({ onExit }: StudyFlowProps) {
       return (
         <StudySetup
           dueCount={due.length}
+          onQuit={onQuit}
           onCancel={onExit}
           onStart={length => {
             setPhase({ name: 'studying', cards: shuffle(due).slice(0, length) });
@@ -107,6 +110,7 @@ export function StudyFlow({ onExit }: StudyFlowProps) {
           remainingDue={selectDueCards(state).length}
           quitEarly={phase.result.quitEarly}
           onDone={onExit}
+          onQuit={onQuit}
         />
       );
   }

@@ -28,10 +28,10 @@ function inStore(node: ReactElement): ReactElement {
 }
 
 const SCREENS: [string, (back: () => void) => ReactElement][] = [
-  ['QuickStats', back => <QuickStats onBack={back} />],
-  ['Achievements', back => <Achievements onBack={back} />],
-  ['Analytics', back => <Analytics onBack={back} />],
-  ['MainMenu', back => <MainMenu onSelect={back} />]
+  ['QuickStats', back => <QuickStats onBack={back} onQuit={back} />],
+  ['Achievements', back => <Achievements onBack={back} onQuit={back} />],
+  ['Analytics', back => <Analytics onBack={back} onQuit={back} />],
+  ['MainMenu', back => <MainMenu onSelect={back} onQuit={back} />]
 ];
 
 describe('help overlay', () => {

@@ -1,30 +1,35 @@
 import { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { ProgressBar } from '../components/ProgressBar.js';
-import { HELP_CONTROL, type Control } from '../controls.js';
+import { screenControls, type Control } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useDispatch } from '../hooks/useStore.js';
 import { GRADE_BINDINGS, gradeForKey, DEFAULT_GRADE } from '../../core/grading.js';
-import { isConfirm, splitKeystrokes } from '../keystrokes.js';
+import { isConfirm } from '../keystrokes.js';
 import type { Flashcard, ReviewQuality } from '../../types/index.js';
 
-const QUESTION_CONTROLS: Control[] = [
+const UNDO_CONTROL: Control = {
+  key: 'u',
+  label: 'undo',
+  description: 'Undo the previous grade and see that card again'
+};
+
+// `esc` ends the session because that is what going back means here — the same
+// key does the same kind of thing on every screen.
+const QUESTION_CONTROLS = screenControls([
   { key: 'space', label: 'reveal', description: 'Show the answer' },
   { key: 's', label: 'skip', description: 'Move on without grading this card' },
-  { key: 'u', label: 'undo', description: 'Undo the previous grade and see that card again' },
-  { key: 'q', label: 'end', description: 'End the session and see the summary' },
-  HELP_CONTROL
-];
+  UNDO_CONTROL
+]);
 
-const ANSWER_CONTROLS: Control[] = [
+const ANSWER_CONTROLS = screenControls([
   { key: '1-5', label: 'grade', description: 'Again · Hard · Good · Easy · Perfect' },
   { key: 'space', label: 'good', description: 'Grade Good, the usual answer' },
-  { key: 'u', label: 'undo', description: 'Undo the previous grade and see that card again' },
-  { key: 'q', label: 'end', description: 'End the session and see the summary' },
-  HELP_CONTROL
-];
+  UNDO_CONTROL
+]);
 
 /** One graded card, kept so undo can rewind the counters as well as the card. */
 interface GradedEntry {
@@ -119,17 +124,8 @@ export function Study({ cards, onFinish }: StudyProps) {
   const handleStroke = (
     stroke: string,
     confirm: boolean,
-    escape: boolean,
     isRevealed: boolean
   ): { revealed: boolean; stop: boolean } => {
-    if (stroke === '?') {
-      toggleHelp();
-      return { revealed: isRevealed, stop: true };
-    }
-    if (stroke === 'q' || escape) {
-      finish(true);
-      return { revealed: isRevealed, stop: true };
-    }
     if (stroke === 'u') {
       undo();
       return { revealed: false, stop: true };
@@ -159,27 +155,21 @@ export function Study({ cards, onFinish }: StudyProps) {
     return { revealed: isRevealed, stop: false };
   };
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
+  // Threaded by hand: React state has not committed between strokes that
+  // arrived in the same read.
+  let pendingReveal = revealed;
 
-    const strokes = splitKeystrokes(input);
-    // Threaded by hand: React state has not committed between strokes that
-    // arrived in the same read.
-    let isRevealed = revealed;
-    for (const stroke of strokes) {
-      const single = strokes.length === 1;
-      const result = handleStroke(
-        stroke,
-        single ? key.return : isConfirm(stroke),
-        single ? key.escape : false,
-        isRevealed
-      );
-      isRevealed = result.revealed;
-      if (result.stop) {
-        break;
-      }
+  useScreenInput({
+    isHelpOpen,
+    toggleHelp,
+    // Leaving the session records what was studied and shows the summary.
+    onBack: () => {
+      finish(true);
+    },
+    onKey: (stroke, key) => {
+      const result = handleStroke(stroke, key.return || isConfirm(stroke), pendingReveal);
+      pendingReveal = result.revealed;
+      return result.stop;
     }
   });
 

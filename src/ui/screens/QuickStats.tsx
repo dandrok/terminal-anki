@@ -1,6 +1,7 @@
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { READONLY_CONTROLS } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState } from '../hooks/useStore.js';
@@ -16,23 +17,15 @@ const BUCKETS: { key: DifficultyLevel; label: string }[] = [
 
 export interface QuickStatsProps {
   onBack: () => void;
+  onQuit: () => void;
 }
 
-export function QuickStats({ onBack }: QuickStatsProps) {
+export function QuickStats({ onBack, onQuit }: QuickStatsProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
   const stats = selectExtendedStats(useAppState());
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-    } else if (key.escape || input === 'q') {
-      onBack();
-    }
-  });
+  useScreenInput({ isHelpOpen, toggleHelp, onBack, onQuit });
 
   const unlocked = stats.achievements.filter(achievement => achievement.unlockedAt).length;
   const row = (label: string, value: string) => (

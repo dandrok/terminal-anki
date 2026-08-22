@@ -1,28 +1,28 @@
 import { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { SelectList, type SelectItem } from '../components/SelectList.js';
-import { HELP_CONTROL, type Control } from '../controls.js';
+import { MOVE_CONTROL, screenControls, type Control } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 
 /** `null` means the learner backed out. */
 export type SessionLength = number | null;
 
-const SETUP_CONTROLS: Control[] = [
-  { key: '↑↓/jk', label: 'move', description: 'Move between session sizes' },
-  { key: '⏎', label: 'start', description: 'Start studying with the highlighted size' },
-  { key: 'esc', label: 'cancel', description: 'Return to the menu without studying' },
-  HELP_CONTROL
-];
+const START_CONTROL: Control = {
+  key: '⏎',
+  label: 'start',
+  description: 'Start studying with this many cards'
+};
 
-const CUSTOM_CONTROLS: Control[] = [
+const SETUP_CONTROLS = screenControls([MOVE_CONTROL, START_CONTROL]);
+
+const CUSTOM_CONTROLS = screenControls([
   { key: '←→/hl', label: '±1', description: 'Adjust the card count by one' },
   { key: '↑↓/jk', label: '±10', description: 'Adjust the card count by ten' },
-  { key: '⏎', label: 'start', description: 'Start studying this many cards' },
-  { key: 'esc', label: 'back', description: 'Return to the session sizes' },
-  HELP_CONTROL
-];
+  START_CONTROL
+]);
 
 const PRESETS = [10, 25, 50];
 const CUSTOM = -1;
@@ -31,9 +31,10 @@ export interface StudySetupProps {
   dueCount: number;
   onStart: (length: number) => void;
   onCancel: () => void;
+  onQuit: () => void;
 }
 
-export function StudySetup({ dueCount, onStart, onCancel }: StudySetupProps) {
+export function StudySetup({ dueCount, onStart, onCancel, onQuit }: StudySetupProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
   const [index, setIndex] = useState(0);
@@ -50,37 +51,33 @@ export function StudySetup({ dueCount, onStart, onCancel }: StudySetupProps) {
 
   const inCustom = custom !== null;
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-      return;
-    }
+  // Clamping, not validation errors: the value simply cannot leave its range.
+  const clamp = (value: number) => Math.max(1, Math.min(dueCount, value));
 
-    if (!inCustom) {
-      if (key.escape) {
-        onCancel();
+  useScreenInput({
+    isHelpOpen,
+    toggleHelp,
+    // Back steps out of the stepper first, then out of the screen.
+    onBack: inCustom ? () => setCustom(null) : onCancel,
+    onQuit,
+    onKey: (stroke, key) => {
+      if (custom === null) {
+        return false;
       }
-      return;
-    }
-
-    // Clamping, not validation errors: the value simply cannot leave its range.
-    const clamp = (value: number) => Math.max(1, Math.min(dueCount, value));
-
-    if (key.escape) {
-      setCustom(null);
-    } else if (key.return) {
-      onStart(clamp(custom));
-    } else if (key.leftArrow || input === 'h') {
-      setCustom(clamp(custom - 1));
-    } else if (key.rightArrow || input === 'l') {
-      setCustom(clamp(custom + 1));
-    } else if (key.downArrow || input === 'j') {
-      setCustom(clamp(custom - 10));
-    } else if (key.upArrow || input === 'k') {
-      setCustom(clamp(custom + 10));
+      if (key.return) {
+        onStart(clamp(custom));
+        return true;
+      }
+      if (key.leftArrow || stroke === 'h') {
+        setCustom(clamp(custom - 1));
+      } else if (key.rightArrow || stroke === 'l') {
+        setCustom(clamp(custom + 1));
+      } else if (key.downArrow || stroke === 'j') {
+        setCustom(clamp(custom - 10));
+      } else if (key.upArrow || stroke === 'k') {
+        setCustom(clamp(custom + 10));
+      }
+      return false;
     }
   });
 

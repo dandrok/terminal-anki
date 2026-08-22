@@ -35,7 +35,13 @@ export function App({ store, themeId = DEFAULT_THEME_ID, onLegacyScreen, onExit 
   return (
     <StoreContext.Provider value={store}>
       <ThemeContext.Provider value={themeId}>
-        <Router screen={screen} onNavigate={setScreen} />
+        <Router
+          screen={screen}
+          onNavigate={setScreen}
+          onQuit={() => {
+            setScreen('exit');
+          }}
+        />
       </ThemeContext.Provider>
     </StoreContext.Provider>
   );

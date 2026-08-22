@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useInput } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { SelectList, type SelectItem } from '../components/SelectList.js';
 import { MENU_CONTROLS } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useAppState } from '../hooks/useStore.js';
 import { selectExtendedStats } from '../../state/selectors.js';
@@ -23,23 +23,16 @@ const ITEMS: SelectItem<Screen>[] = [
 
 export interface MainMenuProps {
   onSelect: (screen: Screen) => void;
+  onQuit: () => void;
 }
 
-export function MainMenu({ onSelect }: MainMenuProps) {
+export function MainMenu({ onSelect, onQuit }: MainMenuProps) {
   const [index, setIndex] = useState(0);
   const { isHelpOpen, toggleHelp } = useHelp();
   const stats = selectExtendedStats(useAppState());
 
-  useInput(input => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-    } else if (input === 'q') {
-      onSelect('exit');
-    }
-  });
+  // The root screen has nowhere to go back to, so esc quits like q.
+  useScreenInput({ isHelpOpen, toggleHelp, onQuit });
 
   const streak = stats.learningStreak.currentStreak;
   const status =

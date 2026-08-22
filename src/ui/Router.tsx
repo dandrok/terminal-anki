@@ -9,6 +9,7 @@ import type { Screen } from './screens/Screen.js';
 export interface RouterProps {
   screen: Screen;
   onNavigate: (screen: Screen) => void;
+  onQuit: () => void;
 }
 
 /**
@@ -19,15 +20,15 @@ export interface RouterProps {
  * screen's element is constructed. `onBack` targets are decided here, keeping
  * screens ignorant of the navigation graph.
  */
-export function Router({ screen, onNavigate }: RouterProps): ReactNode {
+export function Router({ screen, onNavigate, onQuit }: RouterProps): ReactNode {
   const toMenu = () => onNavigate('menu');
 
   const screens: Record<Screen, () => ReactNode> = {
-    menu: () => <MainMenu onSelect={onNavigate} />,
-    stats: () => <QuickStats onBack={toMenu} />,
-    achievements: () => <Achievements onBack={toMenu} />,
-    analytics: () => <Analytics onBack={toMenu} />,
-    study: () => <StudyFlow onExit={toMenu} />,
+    menu: () => <MainMenu onSelect={onNavigate} onQuit={onQuit} />,
+    stats: () => <QuickStats onBack={toMenu} onQuit={onQuit} />,
+    achievements: () => <Achievements onBack={toMenu} onQuit={onQuit} />,
+    analytics: () => <Analytics onBack={toMenu} onQuit={onQuit} />,
+    study: () => <StudyFlow onExit={toMenu} onQuit={onQuit} />,
 
     // Handed to the pre-Ink flow by App; never rendered.
     'custom-study': () => null,

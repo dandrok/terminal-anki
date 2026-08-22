@@ -20,7 +20,8 @@ export function useHelp(): Help {
 
   useInput(
     (input, key) => {
-      if (input === '?' || input === 'h' || key.escape) {
+      // Not `h`: that is the stepper's "-1" key elsewhere.
+      if (input === '?' || key.escape) {
         setIsHelpOpen(false);
       }
     },

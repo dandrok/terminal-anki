@@ -1,7 +1,8 @@
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { ProgressBar } from '../components/ProgressBar.js';
 import { READONLY_CONTROLS } from '../controls.js';
+import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useHelp } from '../hooks/useHelp.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState } from '../hooks/useStore.js';
@@ -17,23 +18,15 @@ const CATEGORY_ORDER: { key: AchievementCategory; label: string }[] = [
 
 export interface AchievementsProps {
   onBack: () => void;
+  onQuit: () => void;
 }
 
-export function Achievements({ onBack }: AchievementsProps) {
+export function Achievements({ onBack, onQuit }: AchievementsProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();
   const { achievements } = selectExtendedStats(useAppState());
 
-  useInput((input, key) => {
-    if (isHelpOpen) {
-      return;
-    }
-    if (input === '?') {
-      toggleHelp();
-    } else if (key.escape || input === 'q') {
-      onBack();
-    }
-  });
+  useScreenInput({ isHelpOpen, toggleHelp, onBack, onQuit });
 
   const unlocked = achievements.filter(achievement => achievement.unlockedAt).length;
 
