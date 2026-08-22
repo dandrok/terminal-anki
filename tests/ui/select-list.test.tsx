@@ -25,8 +25,8 @@ function list(index: number, onMove = vi.fn(), onSelect = vi.fn(), isActive = tr
 }
 
 describe('SelectList', () => {
-  it('marks the selected row with a cursor', () => {
-    withRender(list(1).element, ({ frame }) => {
+  it('marks the selected row with a cursor', async () => {
+    await withRender(list(1).element, ({ frame }) => {
       const lines = frame().split('\n');
       expect(lines[1]).toContain('❯');
       expect(lines[0]).not.toContain('❯');
@@ -36,10 +36,10 @@ describe('SelectList', () => {
   it.each([
     ['arrow down', ARROW_DOWN],
     ['j', 'j']
-  ])('moves down with %s', (_name, key) => {
+  ])('moves down with %s', async (_name, key) => {
     const { element, onMove } = list(0);
-    withRender(element, ({ press }) => {
-      press(key);
+    await withRender(element, async ({ press }) => {
+      await press(key);
       expect(onMove).toHaveBeenCalledWith(1);
     });
   });
@@ -47,44 +47,44 @@ describe('SelectList', () => {
   it.each([
     ['arrow up', ARROW_UP],
     ['k', 'k']
-  ])('moves up with %s', (_name, key) => {
+  ])('moves up with %s', async (_name, key) => {
     const { element, onMove } = list(1);
-    withRender(element, ({ press }) => {
-      press(key);
+    await withRender(element, async ({ press }) => {
+      await press(key);
       expect(onMove).toHaveBeenCalledWith(0);
     });
   });
 
-  it('wraps from the last row to the first', () => {
+  it('wraps from the last row to the first', async () => {
     const { element, onMove } = list(ITEMS.length - 1);
-    withRender(element, ({ press }) => {
-      press('j');
+    await withRender(element, async ({ press }) => {
+      await press('j');
       expect(onMove).toHaveBeenCalledWith(0);
     });
   });
 
-  it('wraps from the first row to the last', () => {
+  it('wraps from the first row to the last', async () => {
     const { element, onMove } = list(0);
-    withRender(element, ({ press }) => {
-      press('k');
+    await withRender(element, async ({ press }) => {
+      await press('k');
       expect(onMove).toHaveBeenCalledWith(ITEMS.length - 1);
     });
   });
 
-  it('selects the highlighted value on enter', () => {
+  it('selects the highlighted value on enter', async () => {
     const { element, onSelect } = list(2);
-    withRender(element, ({ press }) => {
-      press(ENTER);
+    await withRender(element, async ({ press }) => {
+      await press(ENTER);
       expect(onSelect).toHaveBeenCalledWith('c');
     });
   });
 
-  it('ignores input while inactive', () => {
+  it('ignores input while inactive', async () => {
     // Screens pass isActive={!isHelpOpen}, so the overlay swallows all keys.
     const { element, onMove, onSelect } = list(0, vi.fn(), vi.fn(), false);
-    withRender(element, ({ press }) => {
-      press('j');
-      press(ENTER);
+    await withRender(element, async ({ press }) => {
+      await press('j');
+      await press(ENTER);
       expect(onMove).not.toHaveBeenCalled();
       expect(onSelect).not.toHaveBeenCalled();
     });

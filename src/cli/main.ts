@@ -30,6 +30,24 @@ async function runInteractive(studyOnly: boolean): Promise<number> {
   const store = createStore();
 
   // Deferred writes must not be lost when the process is interrupted.
+  installFlushOnSignal(store);
+
+  try {
+    await (studyOnly ? runStudySession(store) : start(store));
+  } finally {
+    store.dispose();
+  }
+  return 0;
+}
+
+/**
+ * Flush deferred writes when the process is interrupted.
+ *
+ * Both the parent and the child hold a store with pending grades, and Ctrl+C
+ * reaches every process in the foreground group — so the child needs this just
+ * as much as the parent, or a session interrupted mid-study loses its grades.
+ */
+function installFlushOnSignal(store: { flush: () => void }): void {
   const flushAndExit = (code: number) => () => {
     try {
       store.flush();
@@ -42,13 +60,6 @@ async function runInteractive(studyOnly: boolean): Promise<number> {
   };
   process.once('SIGINT', flushAndExit(130));
   process.once('SIGTERM', flushAndExit(143));
-
-  try {
-    await (studyOnly ? runStudySession(store) : start(store));
-  } finally {
-    store.dispose();
-  }
-  return 0;
 }
 
 /**
@@ -67,6 +78,8 @@ async function runSingleScreen(screen: Screen): Promise<number> {
   ]);
 
   const store = createStore();
+  installFlushOnSignal(store);
+
   try {
     await runLegacyScreen(store, screen);
   } finally {

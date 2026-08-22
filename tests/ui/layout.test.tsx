@@ -10,8 +10,8 @@ const CONTROLS: Control[] = [
 ];
 
 describe('Layout', () => {
-  it('draws a persistent header with the title and status', () => {
-    withRender(
+  it('draws a persistent header with the title and status', async () => {
+    await withRender(
       <Layout title="Terminal Anki" status="5 due">
         <Text>body</Text>
       </Layout>,
@@ -23,8 +23,8 @@ describe('Layout', () => {
     );
   });
 
-  it('renders the body when help is closed', () => {
-    withRender(
+  it('renders the body when help is closed', async () => {
+    await withRender(
       <Layout title="T" controls={CONTROLS}>
         <Text>the body</Text>
       </Layout>,
@@ -35,9 +35,9 @@ describe('Layout', () => {
     );
   });
 
-  it('replaces the body with help rather than overlaying it', () => {
+  it('replaces the body with help rather than overlaying it', async () => {
     // Ink has no z-index, so the swap is what makes an overlay possible at all.
-    withRender(
+    await withRender(
       <Layout title="T" controls={CONTROLS} isHelpOpen>
         <Text>the body</Text>
       </Layout>,
@@ -48,8 +48,8 @@ describe('Layout', () => {
     );
   });
 
-  it('shows the footer key strip whenever controls are given', () => {
-    withRender(
+  it('shows the footer key strip whenever controls are given', async () => {
+    await withRender(
       <Layout title="T" controls={CONTROLS}>
         <Text>body</Text>
       </Layout>,
@@ -60,8 +60,8 @@ describe('Layout', () => {
     );
   });
 
-  it('omits the footer when a screen declares no controls', () => {
-    withRender(
+  it('omits the footer when a screen declares no controls', async () => {
+    await withRender(
       <Layout title="T">
         <Text>body</Text>
       </Layout>,
@@ -71,8 +71,8 @@ describe('Layout', () => {
     );
   });
 
-  it('derives the help overlay from the same controls as the footer', () => {
-    withRender(
+  it('derives the help overlay from the same controls as the footer', async () => {
+    await withRender(
       <Layout title="T" controls={CONTROLS} isHelpOpen>
         <Text>body</Text>
       </Layout>,
