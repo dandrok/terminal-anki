@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
@@ -22,7 +23,7 @@ export default tseslint.config(
   },
 
   {
-    files: ['**/*.ts'],
+    files: ['**/*.{ts,tsx}'],
     plugins: { prettier: prettierPlugin },
     rules: {
       'prettier/prettier': 'error',
@@ -51,8 +52,17 @@ export default tseslint.config(
   },
 
   {
+    files: ['**/*.tsx', 'src/ui/**/*.ts', 'src/state/**/*.ts'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn'
+    }
+  },
+
+  {
     // Tests reach into internals and assert on loose shapes.
-    files: ['tests/**/*.ts'],
+    files: ['tests/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
