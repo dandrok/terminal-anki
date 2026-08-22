@@ -1,5 +1,6 @@
 import { Box, Text, useInput } from 'ink';
 import { useTheme } from '../hooks/useTheme.js';
+import { isArrowDown, isArrowUp, isConfirm, splitKeystrokes } from '../keystrokes.js';
 
 export interface SelectItem<T> {
   value: T;
@@ -38,15 +39,39 @@ export function SelectList<T>({
       if (items.length === 0) {
         return;
       }
-      if (key.upArrow || input === 'k') {
-        onMove((selectedIndex - 1 + items.length) % items.length);
-      } else if (key.downArrow || input === 'j') {
-        onMove((selectedIndex + 1) % items.length);
-      } else if (key.return) {
-        const item = items[selectedIndex];
-        if (item) {
-          onSelect(item.value);
+
+      // Holding a key, or moving quickly, delivers several strokes in one read.
+      // The index is tracked locally because React state has not committed
+      // between them, so reading `selectedIndex` again would repeat the move.
+      const strokes = splitKeystrokes(input);
+      const single = strokes.length === 1;
+      let index = selectedIndex;
+      let moved = false;
+
+      for (const stroke of strokes) {
+        const up = (single && key.upArrow) || stroke === 'k' || isArrowUp(stroke);
+        const down = (single && key.downArrow) || stroke === 'j' || isArrowDown(stroke);
+
+        if (up) {
+          index = (index - 1 + items.length) % items.length;
+          moved = true;
+        } else if (down) {
+          index = (index + 1) % items.length;
+          moved = true;
+        } else if ((single && key.return) || isConfirm(stroke)) {
+          if (moved) {
+            onMove(index);
+          }
+          const item = items[index];
+          if (item) {
+            onSelect(item.value);
+          }
+          return;
         }
+      }
+
+      if (moved) {
+        onMove(index);
       }
     },
     { isActive }

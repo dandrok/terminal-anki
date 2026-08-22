@@ -15,6 +15,12 @@ export interface ScreenInputOptions {
    */
   onKey?: (stroke: string, key: Key) => boolean | void;
   isActive?: boolean;
+  /**
+   * The screen is editing text, so `q` and `?` are characters rather than
+   * commands. Only `esc` still leaves — otherwise typing a question mark would
+   * open help and typing "q" would close the screen.
+   */
+  isTextInput?: boolean;
 }
 
 /**
@@ -34,7 +40,8 @@ export function useScreenInput({
   onBack,
   onQuit,
   onKey,
-  isActive = true
+  isActive = true,
+  isTextInput = false
 }: ScreenInputOptions): void {
   useInput(
     (input, key) => {
@@ -47,15 +54,21 @@ export function useScreenInput({
         const single = strokes.length === 1;
         const escape = single ? key.escape : false;
 
-        if (stroke === '?') {
-          toggleHelp();
-          return;
-        }
-        // One rule: q and esc leave the current screen. The root screen has
-        // nothing to go back to, so leaving it quits.
-        if (stroke === 'q' || escape) {
+        if (escape) {
           (onBack ?? onQuit)?.();
           return;
+        }
+        if (!isTextInput) {
+          if (stroke === '?') {
+            toggleHelp();
+            return;
+          }
+          // One rule: q and esc leave the current screen. The root screen has
+          // nothing to go back to, so leaving it quits.
+          if (stroke === 'q') {
+            (onBack ?? onQuit)?.();
+            return;
+          }
         }
 
         if (onKey?.(stroke, key) === true) {

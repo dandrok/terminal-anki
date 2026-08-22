@@ -112,7 +112,7 @@ describe('undo of an edit', () => {
 });
 
 describe('recording a session', () => {
-  it('marks a study day, which is why an empty session must not be recorded', () => {
+  it('marks a study day unconditionally, so callers must skip empty sessions', () => {
     // The guard lives in the caller (StudyFlow.finish, and legacy.ts for the
     // screens not yet ported): it skips session/record when studied is zero,
     // because quitting before grading anything must not advance the streak.

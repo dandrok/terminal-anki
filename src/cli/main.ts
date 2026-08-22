@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
 import { helpText, parseArgs } from './args.js';
-import { RUN_SCREEN_FLAG } from './subprocess.js';
 import { showError } from '../ui/messages.js';
-import type { Screen } from '../ui/screens/Screen.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -21,10 +19,9 @@ async function runInteractive(studyOnly: boolean): Promise<number> {
     return 1;
   }
 
-  const [{ createStore }, { start }, { runStudySession }] = await Promise.all([
+  const [{ createStore }, { start }] = await Promise.all([
     import('../state/store.js'),
-    import('../ui/start.js'),
-    import('./legacy.js')
+    import('../ui/start.js')
   ]);
 
   const store = createStore();
@@ -33,7 +30,7 @@ async function runInteractive(studyOnly: boolean): Promise<number> {
   installFlushOnSignal(store);
 
   try {
-    await (studyOnly ? runStudySession(store) : start(store));
+    await start(store, studyOnly ? 'study' : 'menu');
   } finally {
     store.dispose();
   }
@@ -62,40 +59,8 @@ function installFlushOnSignal(store: { flush: () => void }): void {
   process.once('SIGTERM', flushAndExit(143));
 }
 
-/**
- * Run a single screen and exit. Used only by the parent process while the
- * interface is being ported; not a public flag.
- */
-async function runSingleScreen(screen: Screen): Promise<number> {
-  if (!process.stdin.isTTY) {
-    showError('Terminal Anki needs an interactive terminal.');
-    return 1;
-  }
-
-  const [{ createStore }, { runLegacyScreen }] = await Promise.all([
-    import('../state/store.js'),
-    import('./legacy.js')
-  ]);
-
-  const store = createStore();
-  installFlushOnSignal(store);
-
-  try {
-    await runLegacyScreen(store, screen);
-  } finally {
-    store.dispose();
-  }
-  return 0;
-}
-
 async function main(): Promise<number> {
-  const argv = process.argv.slice(2);
-
-  if (argv[0] === RUN_SCREEN_FLAG && argv[1]) {
-    return runSingleScreen(argv[1] as Screen);
-  }
-
-  const { command, unknown } = parseArgs(argv);
+  const { command, unknown } = parseArgs(process.argv.slice(2));
 
   if (unknown.length > 0) {
     showError(`Unknown option(s): ${unknown.join(', ')}`);

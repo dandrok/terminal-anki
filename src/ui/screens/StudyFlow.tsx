@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { StudySetup } from './StudySetup.js';
+import { CustomStudySetup } from './CustomStudySetup.js';
 import { Study, type SessionResult } from './Study.js';
 import { SessionSummary } from './SessionSummary.js';
 import { READONLY_CONTROLS } from '../controls.js';
@@ -9,9 +10,9 @@ import { useHelp } from '../hooks/useHelp.js';
 import { useScreenInput } from '../hooks/useScreenInput.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useAppState, useDispatch } from '../hooks/useStore.js';
-import { selectDueCards } from '../../state/selectors.js';
+import { selectAllTags, selectDueCards, selectFilteredCards } from '../../state/selectors.js';
 import { shuffle } from '../../core/filters.js';
-import type { Flashcard } from '../../types/index.js';
+import type { CustomStudyFilters, Flashcard, SessionType } from '../../types/index.js';
 
 type Phase =
   | { name: 'setup' }
@@ -36,6 +37,8 @@ function NothingDue({ onDone, onQuit }: { onDone: () => void; onQuit: () => void
 export interface StudyFlowProps {
   onExit: () => void;
   onQuit: () => void;
+  /** `custom` opens the filter screen instead of the session-size list. */
+  mode?: SessionType;
 }
 
 /**
@@ -44,10 +47,11 @@ export interface StudyFlowProps {
  * Kept as one component rather than three routes so the session's cards and
  * counters never have to be lifted into the router.
  */
-export function StudyFlow({ onExit, onQuit }: StudyFlowProps) {
+export function StudyFlow({ onExit, onQuit, mode = 'due' }: StudyFlowProps) {
   const state = useAppState();
   const dispatch = useDispatch();
   const [phase, setPhase] = useState<Phase>({ name: 'setup' });
+  const [filters, setFilters] = useState<CustomStudyFilters | undefined>(undefined);
 
   // Snapshotted once, so grading a card during the session cannot change the
   // pool underneath the learner.
@@ -71,13 +75,30 @@ export function StudyFlow({ onExit, onQuit }: StudyFlowProps) {
               ? result.difficulties.reduce((sum, value) => sum + value, 0) /
                 result.difficulties.length
               : 0,
-          sessionType: 'due',
+          sessionType: mode,
+          ...(filters
+            ? { customFilters: { tags: filters.tags, difficulty: filters.difficulty } }
+            : {}),
           quitEarly: result.quitEarly
         }
       });
     }
     setPhase({ name: 'summary', result, skipped: result.skipped });
   };
+
+  if (phase.name === 'setup' && mode === 'custom') {
+    return (
+      <CustomStudySetup
+        allTags={selectAllTags(state)}
+        matchCount={candidate => selectFilteredCards(state, candidate).length}
+        onCancel={onExit}
+        onStart={chosen => {
+          setFilters(chosen);
+          setPhase({ name: 'studying', cards: selectFilteredCards(state, chosen) });
+        }}
+      />
+    );
+  }
 
   if (due.length === 0) {
     return <NothingDue onDone={onExit} onQuit={onQuit} />;

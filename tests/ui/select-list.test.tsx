@@ -79,6 +79,34 @@ describe('SelectList', () => {
     });
   });
 
+  it('applies every stroke when several arrive in one read', async () => {
+    // Holding j, or moving quickly, delivers "jjj" as a single chunk. Reading
+    // selectedIndex per stroke would repeat the same move three times.
+    const { element, onMove } = list(0);
+    await withRender(element, async ({ press }) => {
+      await press('jj');
+      expect(onMove).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledWith(2);
+    });
+  });
+
+  it('wraps correctly across a multi-stroke chunk', async () => {
+    const { element, onMove } = list(0);
+    await withRender(element, async ({ press }) => {
+      await press('jjj');
+      expect(onMove).toHaveBeenCalledWith(0);
+    });
+  });
+
+  it('selects after moving within the same chunk', async () => {
+    const { element, onMove, onSelect } = list(0);
+    await withRender(element, async ({ press }) => {
+      await press('j\r');
+      expect(onMove).toHaveBeenCalledWith(1);
+      expect(onSelect).toHaveBeenCalledWith('b');
+    });
+  });
+
   it('ignores input while inactive', async () => {
     // Screens pass isActive={!isHelpOpen}, so the overlay swallows all keys.
     const { element, onMove, onSelect } = list(0, vi.fn(), vi.fn(), false);

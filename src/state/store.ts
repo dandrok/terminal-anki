@@ -49,7 +49,7 @@ export interface Store {
   dispatch: (action: AppAction) => void;
   /** Write any pending changes now. Safe to call from an exit handler. */
   flush: () => void;
-  /** Re-read from disk, discarding undo history. */
+  /** Re-read from disk, discarding undo history. Never throws. */
   reload: () => void;
   /** Flush, cancel timers and release listeners. Never throws. */
   dispose: () => void;
@@ -190,7 +190,9 @@ export function createStore(options: StoreOptions = {}): Store {
     dispatch,
     flush,
     reload: () => {
-      flush();
+      // Report a failed write rather than throwing: the caller asked for what
+      // is on disk, and aborting would leave them with neither.
+      flushSafely();
       state = createInitialState(repository.load().data);
       notify();
     },

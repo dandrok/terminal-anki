@@ -3,34 +3,27 @@ import { useApp } from 'ink';
 import { Router } from './Router.js';
 import { StoreContext } from './hooks/useStore.js';
 import { ThemeContext } from './hooks/useTheme.js';
-import { isLegacyScreen, type Screen } from './screens/Screen.js';
+import type { Screen } from './screens/Screen.js';
 import { DEFAULT_THEME_ID, type ThemeId } from './theme/palette.js';
 import type { Store } from '../state/store.js';
+import type { Flashcard } from '../types/index.js';
 
 export interface AppProps {
   store: Store;
   themeId?: ThemeId;
-  /**
-   * Screens not yet ported to Ink are handed back to the caller, which unmounts
-   * Ink, runs the existing flow, and remounts. Removed once every screen lands.
-   */
-  onLegacyScreen: (screen: Screen) => void;
-  onExit: () => void;
+  initialScreen?: Screen;
 }
 
-export function App({ store, themeId = DEFAULT_THEME_ID, onLegacyScreen, onExit }: AppProps) {
+export function App({ store, themeId = DEFAULT_THEME_ID, initialScreen = 'menu' }: AppProps) {
   const { exit } = useApp();
-  const [screen, setScreen] = useState<Screen>('menu');
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [editing, setEditing] = useState<Flashcard | undefined>(undefined);
 
   useEffect(() => {
     if (screen === 'exit') {
-      onExit();
-      exit();
-    } else if (isLegacyScreen(screen)) {
-      onLegacyScreen(screen);
       exit();
     }
-  }, [screen, exit, onLegacyScreen, onExit]);
+  }, [screen, exit]);
 
   return (
     <StoreContext.Provider value={store}>
@@ -40,6 +33,11 @@ export function App({ store, themeId = DEFAULT_THEME_ID, onLegacyScreen, onExit 
           onNavigate={setScreen}
           onQuit={() => {
             setScreen('exit');
+          }}
+          editing={editing}
+          onEdit={card => {
+            setEditing(card);
+            setScreen('edit');
           }}
         />
       </ThemeContext.Provider>

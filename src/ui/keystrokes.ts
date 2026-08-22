@@ -48,6 +48,16 @@ export function splitKeystrokes(input: string): string[] {
   return strokes;
 }
 
+/** True when a keystroke is the up-arrow escape sequence. */
+export function isArrowUp(stroke: string): boolean {
+  return stroke === `${ESC}[A` || stroke === `${ESC}OA`;
+}
+
+/** True when a keystroke is the down-arrow escape sequence. */
+export function isArrowDown(stroke: string): boolean {
+  return stroke === `${ESC}[B` || stroke === `${ESC}OB`;
+}
+
 /** True when a keystroke means "confirm". */
 export function isConfirm(stroke: string): boolean {
   return stroke === '\r' || stroke === '\n';
