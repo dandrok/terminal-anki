@@ -1,8 +1,8 @@
 {
   "name": "terminal-anki",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Terminal-based flashcard application with spaced repetition learning. A modern CLI implementation of the SM-2 algorithm with professional session control.",
+  "description": "Flashcards with spaced repetition in your terminal. SM-2 scheduling, two-keystroke grading, activity heatmap and undo, built on Ink and React.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -18,6 +18,7 @@
   "files": [
     "dist/",
     "README.md",
+    "RELEASING.md",
     "LICENSE"
   ],
   "engines": {
@@ -26,7 +27,7 @@
   "scripts": {
     "start": "node dist/cli/main.js",
     "dev": "tsx src/cli/main.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/make-bin-executable.mjs",
     "watch": "tsc -p tsconfig.build.json --watch",
     "clean": "rm -rf dist coverage",
     "lint": "eslint .",
@@ -48,7 +49,12 @@
     "cli",
     "spaced-repetition",
     "learning",
-    "sm-2"
+    "sm-2",
+    "ink",
+    "tui",
+    "react",
+    "study",
+    "srs"
   ],
   "author": "dandrok",
   "license": "MIT",
@@ -61,17 +67,19 @@
   },
   "homepage": "https://github.com/dandrok/terminal-anki#readme",
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
-    "chalk": "^6.0.0",
-    "ora": "^9.4.1"
+    "ink": "^7.1.1",
+    "react": "^19.2.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "ink-testing-library": "^4.0.0",
     "prettier": "^3.9.6",
     "simple-git-hooks": "^2.13.1",
     "tsx": "^4.23.12",

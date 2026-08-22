@@ -68,11 +68,6 @@ export function schedule(
   };
 }
 
-/** Apply a review to a card in place. */
-export function reviewCard(card: Flashcard, quality: ReviewQuality, now: Date = new Date()): void {
-  Object.assign(card, schedule(card, quality, now));
-}
-
 /** Scheduling state for a card that has never been reviewed. */
 export function initialSchedulingState(now: Date = new Date()): SchedulingState {
   return {

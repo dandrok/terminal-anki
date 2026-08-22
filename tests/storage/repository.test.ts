@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FlashcardRepository } from '../../src/storage/repository.js';
+import { createRepository, type RepositoryOptions } from '../../src/storage/repository.js';
 import { emptyPersistedData } from '../../src/storage/serialization.js';
 import { makeCard } from '../helpers.js';
 
@@ -10,11 +10,11 @@ let workspace: string;
 let dataFile: string;
 const warnings: string[] = [];
 
-const repo = (overrides: Partial<ConstructorParameters<typeof FlashcardRepository>[0]> = {}) =>
-  new FlashcardRepository({
+const repo = (overrides: Partial<RepositoryOptions> = {}) =>
+  createRepository({
     dataFile,
     legacyFile: null,
-    onWarning: message => warnings.push(message),
+    onWarning: (message: string) => warnings.push(message),
     ...overrides
   });
 
@@ -72,11 +72,7 @@ describe('load with a corrupt file', () => {
   });
 
   it('refuses to write when the file could not be backed up', () => {
-    const repository = new FlashcardRepository({
-      dataFile,
-      legacyFile: null,
-      onWarning: message => warnings.push(message)
-    });
+    const repository = repo();
     // Force the backup copy to fail by making the directory read-only.
     const original = fs.copyFileSync;
     (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = () => {
@@ -85,13 +81,34 @@ describe('load with a corrupt file', () => {
 
     try {
       repository.load();
-      expect(repository.isReadOnly).toBe(true);
+      expect(repository.isReadOnly()).toBe(true);
 
       repository.save(emptyPersistedData());
       expect(fs.readFileSync(dataFile, 'utf-8')).toBe('{ this is not json');
     } finally {
       (fs as { copyFileSync: typeof fs.copyFileSync }).copyFileSync = original;
     }
+  });
+});
+
+describe('load with valid JSON that is not a data file', () => {
+  it.each([
+    ['null', 'null'],
+    ['an array', '[1,2,3]'],
+    ['a number', '42'],
+    ['a string', '"hello"']
+  ])('treats %s as corrupt rather than as empty data', (_label, payload) => {
+    // These all parse successfully. Normalizing them would give an empty
+    // collection with isNew=false, so the next save would overwrite whatever
+    // the user actually had.
+    fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+    fs.writeFileSync(dataFile, payload);
+
+    const result = repo().load();
+    expect(result.corruptBackup).toBeDefined();
+    expect(fs.readFileSync(result.corruptBackup!, 'utf-8')).toBe(payload);
+    expect(result.isNew).toBe(true);
+    expect(warnings).toHaveLength(1);
   });
 });
 
@@ -104,10 +121,10 @@ describe('legacy migration', () => {
       JSON.stringify({ cards: [{ id: '1', front: 'Old', back: 'Card' }] })
     );
 
-    const result = new FlashcardRepository({
+    const result = createRepository({
       dataFile,
       legacyFile,
-      onWarning: message => warnings.push(message)
+      onWarning: (message: string) => warnings.push(message)
     }).load();
 
     expect(result.migratedFrom).toBe(legacyFile);
@@ -124,9 +141,9 @@ describe('legacy migration', () => {
 
     const data = emptyPersistedData();
     data.cards = [makeCard({ front: 'Current' })];
-    new FlashcardRepository({ dataFile, legacyFile: null }).save(data);
+    createRepository({ dataFile, legacyFile: null }).save(data);
 
-    const result = new FlashcardRepository({ dataFile, legacyFile }).load();
+    const result = createRepository({ dataFile, legacyFile }).load();
     expect(result.migratedFrom).toBeUndefined();
     expect(result.data.cards[0]).toMatchObject({ front: 'Current' });
   });
