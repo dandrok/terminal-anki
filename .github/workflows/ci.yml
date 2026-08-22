@@ -72,6 +72,15 @@ jobs:
           node dist/cli/main.js --version
           node dist/cli/main.js --help
 
+      # A clean build creates the bin as 644. npm sets the bit itself when
+      # installing a published package, so this only breaks `npm link` and
+      # build-from-source — quietly, and with a confusing PATH error.
+      - name: Verify the bin is executable
+        run: |
+          bin="$(node -p "require('./package.json').bin.anki")"
+          test -x "$bin" || { echo "::error::$bin is not executable"; exit 1; }
+          "$bin" --version
+
       - name: Verify the published package contents
         run: npm pack --dry-run
 

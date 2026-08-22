@@ -72,8 +72,16 @@ export default tseslint.config(
   },
 
   {
-    files: ['**/*.js', '**/*.config.ts'],
-    ...tseslint.configs.disableTypeChecked
+    // Build scripts and config files are plain Node, outside the TypeScript
+    // project, so type-aware rules cannot apply to them. `languageOptions` has
+    // to be merged rather than replaced: overwriting it puts the project
+    // service back and the parser then rejects these files.
+    files: ['**/*.js', '**/*.mjs', '**/*.config.ts'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: { console: 'readonly', process: 'readonly' }
+    }
   },
 
   prettierConfig
