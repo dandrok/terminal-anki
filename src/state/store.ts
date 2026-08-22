@@ -32,6 +32,12 @@ export interface StoreOptions extends RepositoryOptions {
   seedSampleCards?: boolean;
   /** Substitute repository, for tests. */
   repository?: Repository;
+  /**
+   * Called when a write fails somewhere with no caller able to handle it — a
+   * keypress handler or the debounce timer. The data stays pending and a retry
+   * is armed; this is purely how the failure gets reported.
+   */
+  onWriteError?: (error: unknown) => void;
 }
 
 export interface Store {
@@ -70,7 +76,12 @@ function buildSampleCards(now: Date): Flashcard[] {
  * `getSnapshot`/`subscribe` match the `useSyncExternalStore` contract exactly.
  */
 export function createStore(options: StoreOptions = {}): Store {
-  const { seedSampleCards = true, repository: injected, ...repositoryOptions } = options;
+  const {
+    seedSampleCards = true,
+    repository: injected,
+    onWriteError = (error: unknown) => console.error(error),
+    ...repositoryOptions
+  } = options;
   const repository = injected ?? createRepository(repositoryOptions);
 
   const result = repository.load();
@@ -105,10 +116,26 @@ export function createStore(options: StoreOptions = {}): Store {
     pendingWrites = 0;
   };
 
+  /**
+   * Flush where there is nobody to catch a failure.
+   *
+   * A timer callback and a keypress handler both sit at a boundary with no
+   * caller, so throwing there is an unhandled exception — losing the whole
+   * session to a transient disk error. `flush` has already retained the pending
+   * count and re-armed the timer, so reporting is all that is left to do.
+   */
+  const flushSafely = (): void => {
+    try {
+      flush();
+    } catch (error) {
+      onWriteError(error);
+    }
+  };
+
   const scheduleFlush = (): void => {
     cancelTimer();
     // unref so a pending flush can never hold the process open on exit.
-    flushTimer = setTimeout(flush, FLUSH_IDLE_MS);
+    flushTimer = setTimeout(flushSafely, FLUSH_IDLE_MS);
     flushTimer.unref?.();
   };
 
@@ -127,17 +154,20 @@ export function createStore(options: StoreOptions = {}): Store {
 
     pendingWrites++;
 
-    if (writePolicyFor(action) === 'immediate') {
-      flush();
-    } else if (pendingWrites >= FLUSH_AFTER_ACTIONS) {
+    try {
       // Bound worst-case loss by count as well as by time, so fast grading
       // cannot defer indefinitely.
-      flush();
-    } else {
-      scheduleFlush();
+      if (writePolicyFor(action) === 'immediate' || pendingWrites >= FLUSH_AFTER_ACTIONS) {
+        flushSafely();
+      } else {
+        scheduleFlush();
+      }
+    } finally {
+      // Subscribers must learn about the new state even if persistence failed:
+      // it is already the truth in memory, and a screen left showing the old
+      // value is a second bug on top of the first.
+      notify();
     }
-
-    notify();
   };
 
   // Sample cards seed a first run only. They are deliberately not re-created

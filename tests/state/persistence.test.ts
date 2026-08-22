@@ -159,11 +159,16 @@ describe('write batching', () => {
     // discard changes that never reached disk.
     const { repository, saves, current, failNextSave } = fakeRepository();
     failNextSave('disk full');
+    const onWriteError = vi.fn();
 
-    const store = createStore({ repository, seedSampleCards: false });
+    const store = createStore({ repository, seedSampleCards: false, onWriteError });
+
+    // A keypress handler has no caller to catch a throw, so dispatch reports
+    // rather than propagating.
     expect(() =>
       store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW })
-    ).toThrow('disk full');
+    ).not.toThrow();
+    expect(onWriteError).toHaveBeenCalledOnce();
     expect(saves.length).toBe(0);
 
     // The data is still pending, so a later flush writes it.
@@ -172,17 +177,41 @@ describe('write batching', () => {
     expect(current().cards).toHaveLength(1);
   });
 
+  it('notifies subscribers even when the write fails', () => {
+    // The state is already the truth in memory; a screen left showing the old
+    // value would be a second bug on top of the failed write.
+    const { repository, failNextSave } = fakeRepository();
+    const store = createStore({
+      repository,
+      seedSampleCards: false,
+      onWriteError: () => undefined
+    });
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    failNextSave('disk full');
+    store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(store.getSnapshot().data.cards).toHaveLength(1);
+  });
+
   it('re-arms the debounce after a failed write', () => {
     const { repository, saves, failNextSave } = fakeRepository();
+    const onWriteError = vi.fn();
 
-    const store = createStore({ repository, seedSampleCards: false });
+    const store = createStore({ repository, seedSampleCards: false, onWriteError });
     store.dispatch({ type: 'card/add', front: 'Q', back: 'A', tags: [], now: NOW });
     const id = selectCards(store.getSnapshot())[0].id;
     const before = saves.length;
 
     failNextSave('transient');
     store.dispatch({ type: 'card/grade', id, quality: 3, now: NOW });
-    expect(() => vi.advanceTimersByTime(FLUSH_IDLE_MS)).toThrow('transient');
+
+    // A throw here would be an unhandled exception at the timer boundary and
+    // would take the whole session down for a transient disk error.
+    expect(() => vi.advanceTimersByTime(FLUSH_IDLE_MS)).not.toThrow();
+    expect(onWriteError).toHaveBeenCalledOnce();
     expect(saves.length).toBe(before);
 
     // A re-armed timer means the retry lands without another dispatch.
