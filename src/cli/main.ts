@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
-import { TerminalAnki } from './app.js';
+import { createAppStore, runInteractive, runStudyOnly } from './app.js';
 import { helpText, parseArgs } from './args.js';
 import { showError } from '../ui/messages.js';
 
@@ -24,11 +24,24 @@ async function main(): Promise<number> {
       console.log(version);
       return 0;
     case 'study':
-      await new TerminalAnki().studyMode();
+    case 'interactive': {
+      const store = createAppStore();
+
+      // Deferred writes must not be lost when the process is interrupted.
+      const flushAndExit = (code: number) => () => {
+        store.flush();
+        process.exit(code);
+      };
+      process.once('SIGINT', flushAndExit(130));
+      process.once('SIGTERM', flushAndExit(143));
+
+      try {
+        await (command === 'study' ? runStudyOnly(store) : runInteractive(store));
+      } finally {
+        store.dispose();
+      }
       return 0;
-    case 'interactive':
-      await new TerminalAnki().run();
-      return 0;
+    }
   }
 }
 
