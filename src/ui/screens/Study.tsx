@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
+import { CardText } from '../components/CardText.js';
 import { ProgressBar } from '../components/ProgressBar.js';
 import { screenControls, type Control } from '../controls.js';
 import { useScreenInput } from '../hooks/useScreenInput.js';
@@ -204,16 +205,14 @@ export function Study({ cards, onFinish }: StudyProps) {
           <ProgressBar current={index} total={cards.length} width={24} />
         </Box>
 
-        <Text bold color={theme.text}>
-          {card.front}
-        </Text>
+        <CardText value={card.front} color={theme.text} bold />
 
         {card.tags.length > 0 ? <Text color={theme.muted}>◈ {card.tags.join(', ')}</Text> : null}
 
         {revealed ? (
           <Box flexDirection="column" marginTop={1}>
             <Text color={theme.muted}>{'─'.repeat(24)}</Text>
-            <Text color={theme.success}>{card.back}</Text>
+            <CardText value={card.back} color={theme.success} />
 
             <Box marginTop={1} gap={2}>
               {GRADE_BINDINGS.map(binding => (

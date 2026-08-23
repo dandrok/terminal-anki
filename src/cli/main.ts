@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
-import { helpText, parseArgs } from './args.js';
+import { helpText, parseArgs, type ParsedArgs } from './args.js';
 import { showError } from '../ui/messages.js';
 
 const require = createRequire(import.meta.url);
@@ -59,8 +59,28 @@ function installFlushOnSignal(store: { flush: () => void }): void {
   process.once('SIGTERM', flushAndExit(143));
 }
 
+/**
+ * Run a one-shot file command.
+ *
+ * Loaded on demand so neither the import machinery nor `node:sqlite` is
+ * reachable from `--help`, which `tests/cli/startup-budget.test.ts` enforces.
+ */
+async function runTransfer(args: ParsedArgs): Promise<number> {
+  const { runExport, runImport } = await import('./transfer.js');
+  const result = args.command === 'import' ? runImport(args) : runExport(args);
+  for (const line of result.lines) {
+    if (result.code === 0) {
+      console.log(line);
+    } else {
+      showError(line);
+    }
+  }
+  return result.code;
+}
+
 async function main(): Promise<number> {
-  const { command, unknown } = parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2));
+  const { command, unknown } = args;
 
   if (unknown.length > 0) {
     showError(`Unknown option(s): ${unknown.join(', ')}`);
@@ -77,6 +97,9 @@ async function main(): Promise<number> {
       return 0;
     case 'study':
       return runInteractive(true);
+    case 'import':
+    case 'export':
+      return runTransfer(args);
     case 'interactive':
       return runInteractive(false);
   }

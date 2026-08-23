@@ -25,6 +25,7 @@ export function writePolicyFor(action: AppAction): WritePolicy {
     case 'card/edit':
     case 'card/delete':
     case 'session/record':
+    case 'cards/import':
     case 'seed':
       return 'immediate';
     // Undo can reverse a delete or an edit, both of which were written

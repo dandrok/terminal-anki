@@ -7,14 +7,31 @@ import { useScreenInput } from '../hooks/useScreenInput.js';
 import { ThemeContext, useTheme } from '../hooks/useTheme.js';
 import { useConfig, useConfigUpdate } from '../hooks/useConfig.js';
 import { THEMES, THEME_IDS, type ThemeId } from '../theme/palette.js';
-import { LIMITS, SESSION_LENGTHS, clamp, withConfig, type AppConfig } from '../../config/schema.js';
+import {
+  IMAGE_MODES,
+  LIMITS,
+  SESSION_LENGTHS,
+  clamp,
+  withConfig,
+  type AppConfig
+} from '../../config/schema.js';
+import { describeSupport, resolveImageSupport } from '../images/detect.js';
+import { useImages } from '../hooks/useImages.js';
 import { plural } from '../format.js';
 
-const FIELDS = ['theme', 'dailyGoal', 'heatmapWeeks', 'defaultSessionLength', 'shuffle'] as const;
+const FIELDS = [
+  'theme',
+  'images',
+  'dailyGoal',
+  'heatmapWeeks',
+  'defaultSessionLength',
+  'shuffle'
+] as const;
 type Field = (typeof FIELDS)[number];
 
 const LABELS: Record<Field, string> = {
   theme: 'Theme',
+  images: 'Images',
   dailyGoal: 'Daily goal',
   heatmapWeeks: 'History span',
   defaultSessionLength: 'Session size',
@@ -23,6 +40,7 @@ const LABELS: Record<Field, string> = {
 
 const HINTS: Record<Field, string> = {
   theme: 'Colours for every screen — previewed as you change it',
+  images: 'How pictures on a card are drawn — applied as soon as you save',
   dailyGoal: 'Cards in a day that fills a square on the activity grid',
   heatmapWeeks: 'How far back the activity grid reaches',
   defaultSessionLength: 'Offered first when you start studying',
@@ -39,6 +57,13 @@ export interface SettingsProps {
   onBack: () => void;
 }
 
+const IMAGE_LABELS: Record<(typeof IMAGE_MODES)[number], string> = {
+  auto: 'automatic',
+  kitty: 'kitty protocol',
+  external: 'coloured blocks',
+  off: 'filenames only'
+};
+
 /**
  * Change how the application looks and what it defaults to.
  *
@@ -51,6 +76,7 @@ export interface SettingsProps {
  */
 export function Settings({ onBack }: SettingsProps) {
   const saved = useConfig();
+  const images = useImages();
   const update = useConfigUpdate();
   const { isHelpOpen, toggleHelp } = useHelp();
 
@@ -116,6 +142,12 @@ export function Settings({ onBack }: SettingsProps) {
         commit(withConfig(current, { defaultSessionLength: next }));
         break;
       }
+      case 'images': {
+        const at = IMAGE_MODES.indexOf(current.images);
+        const next = IMAGE_MODES[(at + delta + IMAGE_MODES.length) % IMAGE_MODES.length];
+        commit(withConfig(current, { images: next }));
+        break;
+      }
       case 'shuffle':
         commit(withConfig(current, { shuffle: !current.shuffle }));
         break;
@@ -146,8 +178,15 @@ export function Settings({ onBack }: SettingsProps) {
     }
   });
 
+  // What the chosen mode would actually amount to here, so "automatic" is not
+  // a mystery and picking a mode this terminal cannot do says so immediately.
+  const imageOutcome = describeSupport(
+    resolveImageSupport(draft.images, { hasExternalTool: Boolean(images.renderer) })
+  );
+
   const values: Record<Field, string> = {
     theme: THEMES[draft.theme].label,
+    images: `${IMAGE_LABELS[draft.images]} · ${imageOutcome}`,
     dailyGoal: `${plural(draft.dailyGoal, 'card')} a day`,
     heatmapWeeks: plural(draft.heatmapWeeks, 'week'),
     defaultSessionLength:

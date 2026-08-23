@@ -13,8 +13,10 @@ export default defineConfig({
         'src/storage/**',
         'src/state/**',
         'src/ui/charts/**',
+        'src/ui/images/**',
         'src/services/**',
-        'src/cli/args.ts'
+        'src/cli/args.ts',
+        'src/cli/transfer.ts'
       ],
       thresholds: {
         lines: 80,

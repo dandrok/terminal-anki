@@ -1,5 +1,82 @@
 # Changelog
 
+## 2.1.0
+
+### Images on cards
+
+A card with a picture now shows it. In **kitty**, **ghostty** and **WezTerm** that is the real
+image at full resolution; elsewhere, if [`chafa`](https://hpjansson.org/chafa/) is on `PATH`,
+coloured block art; otherwise `[image: diagram.png]` as before.
+
+This costs no dependencies and contains no image decoder. The encoded file is handed straight to
+the terminal, and only the dimensions are read — from the header — so pictures keep their shape
+against terminal cells that are twice as tall as they are wide.
+
+The drawing uses kitty's **unicode placeholders** rather than a graphics escape, which is the
+only thing that works inside a laid-out frame: Ink measures every string to position it, and a
+graphics escape is not a sequence it knows to skip — a short one measures as twenty visible
+columns and takes the layout with it. Placeholders measure as one cell each.
+
+A new **Images** setting overrides the detection, which matters most under tmux: graphics
+escapes are only forwarded there with `allow-passthrough on`, so the protocol is off by default
+inside a multiplexer rather than risk painting escape sequences across the screen as text.
+
+### Import a deck from AnkiWeb
+
+`anki import deck.apkg` reads Anki packages directly — both the modern zstd format every
+current deck uses and the older one — with **no new dependencies**. Node's built-in `sqlite`
+reads the collection and `zlib` handles the zip and the zstd.
+
+- **Scheduling comes across.** A deck you have already studied arrives with its intervals,
+  ease factors and review counts intact rather than resetting to new. Cards still in learning
+  arrive as new, since their interval is in seconds and means nothing here.
+- **Deck names become tags, per card.** A package holds a deck tree, so tagging every note
+  with one name would label cards that were nowhere near it. The "Default" deck is ignored.
+- **Images are stored** under `media/` in your data directory, named by a hash of their
+  contents so two decks shipping a different `heart.png` cannot overwrite each other, and drawn
+  on the card in terminals that can show them.
+- Re-importing is idempotent across formats: the same deck as `.apkg` and `.csv`, or as legacy
+  and modern packages, updates rather than duplicates.
+
+Note types are never parsed, which is why this is small: field values come from the note, cloze
+is visible in the text, and a reverse card is a count over the note's cards.
+
+### Import and export
+
+`anki import deck.csv` and `anki export deck.csv`, using **Anki's own tab-separated text
+format** so one file works in both applications with no converter in between.
+
+Import reads the `#separator`, `#html`, `#tags column` and `#guid column` headers Anki writes,
+converts HTML fields to plain text — Anki's editor writes `<div>` per line, so without this a
+real deck imports as tag soup — and prints the first few cards so a wrong column mapping is
+obvious before thousands of them land in your collection.
+
+- `--dry-run` reports exactly what would happen and writes nothing, running the same code path
+  as a real import.
+- `--front` / `--back` override the columns, `--tag` labels everything it brings in.
+- Re-importing does not duplicate. A deck with Anki's note GUIDs is matched on those, so an
+  updated deck refreshes cards you are already studying **while keeping their scheduling**.
+  Without GUIDs, cards are matched on question text and left alone.
+- A whole import is one undo step, however many cards it brought in.
+- Cloze notes, reverse cards and audio are counted and reported rather than silently mangled.
+
+### Also fixed
+
+- **Exporting and re-importing your own deck destroyed its pictures.** The
+  readable `[image: x.png]` came back as literal text, and because the note guid
+  still matched it *overwrote* the good card rather than being spotted as a
+  duplicate. A deck with pictures now exports as HTML with `<img>` tags, which
+  survive the trip in both directions; a deck without them stays plain text,
+  where a card containing a `<` is safe.
+
+- **Accented characters imported as raw entities.** `caf&eacute;` and `ni&ntilde;o` came
+  through literally, which affected every French, Spanish and German deck — the most shared
+  kind there is. The full Latin-1 entity set now decodes.
+- **A tag containing a space became two tags** after an export/import round trip, because both
+  Anki and our text format separate tags with spaces. Internal whitespace now becomes a hyphen.
+  Existing tags with spaces are converted on the next load.
+- `<img data-src="placeholder.png" src="real.png">` imported the placeholder.
+
 ## 2.0.0
 
 A rewrite of everything above the learning rules. **Your data carries over untouched** — the

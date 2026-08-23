@@ -1,5 +1,6 @@
 import { createAchievements, evaluateAchievements } from '../core/achievements.js';
 import { normalizeTags } from '../core/filters.js';
+import { mergeImport } from '../core/import.js';
 import { createId } from '../core/ids.js';
 import { initialSchedulingState, schedule } from '../core/sm2.js';
 import { sessionAccuracy } from '../core/stats.js';
@@ -100,6 +101,32 @@ export function reduce(state: AppState, action: AppAction): AppState {
       return commit({ ...state.data, cards: [...state.data.cards, card] }, action.now, state.undo);
     }
 
+    case 'cards/import': {
+      if (action.added.length === 0 && action.updated.length === 0) {
+        return state;
+      }
+
+      const cards = mergeImport(state.data.cards, action.added, action.updated);
+
+      // One undo entry for the whole import, because the stack is 20 deep and
+      // a per-card entry would make undoing a 3,000-card deck impossible. It
+      // records only what changed, so undo cannot reach past the import into
+      // whatever happened after it.
+      const replaced = action.updated
+        .map(next => state.data.cards.find(card => card.id === next.id))
+        .filter((card): card is Flashcard => card !== undefined);
+
+      return commit(
+        { ...state.data, cards },
+        action.now,
+        pushUndo(state.undo, {
+          kind: 'import',
+          addedIds: action.added.map(card => card.id),
+          replaced
+        })
+      );
+    }
+
     case 'card/delete': {
       const index = state.data.cards.findIndex(card => card.id === action.id);
       if (index === -1) {
@@ -180,6 +207,18 @@ export function reduce(state: AppState, action: AppAction): AppState {
       if (entry.kind === 'delete') {
         const cards = [...state.data.cards];
         cards.splice(Math.min(entry.index, cards.length), 0, entry.card);
+        return commit({ ...state.data, cards }, action.now, undo);
+      }
+
+      // Remove exactly the cards the import added and restore exactly the ones
+      // it rewrote, leaving everything else — including anything added since —
+      // where it is.
+      if (entry.kind === 'import') {
+        const removed = new Set(entry.addedIds);
+        const restore = new Map(entry.replaced.map(card => [card.id, card]));
+        const cards = state.data.cards
+          .filter(card => !removed.has(card.id))
+          .map(card => restore.get(card.id) ?? card);
         return commit({ ...state.data, cards }, action.now, undo);
       }
 

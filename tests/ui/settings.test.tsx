@@ -14,6 +14,46 @@ import { withRender } from './render.js';
 
 const RETURN = String.fromCharCode(13);
 
+/**
+ * Rows in the order the screen lists them.
+ *
+ * A hand-kept copy, so `downTo` below checks it landed rather than trusting it:
+ * these tests used a fixed number of `j` presses and adding a setting pointed
+ * them at the wrong row without failing.
+ */
+const FIELD_ORDER = ['Theme', 'Images', 'Daily goal', 'History span', 'Session size', 'Card order'];
+
+/** The cursor marker sits at the start of the highlighted row. */
+function selectedRow(frame: string): string | undefined {
+  return frame
+    .split('\n')
+    .find(line => line.includes('❯'))
+    ?.replace(/.*❯\s*/, '')
+    .split(':')[0]
+    .trim();
+}
+
+/**
+ * Walk the cursor down to a named row and confirm it got there.
+ *
+ * The assertion is the point: without it, reordering the rows would send every
+ * test that navigates to the wrong setting and they would all still pass.
+ */
+async function downTo(
+  label: string,
+  press: (input: string) => Promise<void>,
+  frame: () => string
+): Promise<void> {
+  const at = FIELD_ORDER.indexOf(label);
+  if (at < 0) {
+    throw new Error(`no settings row called ${label}`);
+  }
+  for (let step = 0; step < at; step++) {
+    await press('j');
+  }
+  expect(selectedRow(frame())).toBe(label);
+}
+
 function withConfigContext(
   node: ReactElement,
   config: AppConfig,
@@ -65,9 +105,9 @@ describe('Settings', () => {
     const onBack = vi.fn();
     await withRender(
       withConfigContext(<Settings onBack={onBack} />, DEFAULT_CONFIG, update),
-      async ({ press }) => {
+      async ({ frame, press }) => {
         await press('l');
-        await press('j');
+        await downTo('Daily goal', press, frame);
         await press('l');
         await press(RETURN);
       }
@@ -114,6 +154,21 @@ describe('Settings', () => {
     );
   });
 
+  it('offers the image modes and says what each would give you', async () => {
+    await withRender(
+      withConfigContext(<Settings onBack={vi.fn()} />, DEFAULT_CONFIG),
+      async ({ frame, press }) => {
+        await downTo('Images', press, frame);
+        expect(frame()).toContain('Images');
+        // "automatic" alone says nothing; the outcome is the useful half.
+        expect(frame()).toMatch(/automatic · (full resolution|coloured blocks|filenames only)/);
+
+        await press('l');
+        expect(frame()).toContain('kitty protocol');
+      }
+    );
+  });
+
   it('clamps at the ends instead of refusing the keystroke', async () => {
     await withRender(
       withConfigContext(
@@ -121,7 +176,7 @@ describe('Settings', () => {
         withConfig(DEFAULT_CONFIG, { dailyGoal: 200 })
       ),
       async ({ frame, press }) => {
-        await press('j');
+        await downTo('Daily goal', press, frame);
         await press('lll');
         expect(frame()).toContain('200 cards a day');
       }
@@ -132,9 +187,9 @@ describe('Settings', () => {
     await withRender(
       withConfigContext(<Settings onBack={vi.fn()} />, DEFAULT_CONFIG),
       async ({ frame, press }) => {
-        // One chunk: row down, then three steps on that row.
-        await press('jlll');
-        expect(frame()).toContain('Daily goal');
+        // One chunk: down to the goal row, then three steps along it.
+        await press(`${'j'.repeat(FIELD_ORDER.indexOf('Daily goal'))}lll`);
+        expect(selectedRow(frame())).toBe('Daily goal');
         expect(frame()).toContain(`${DEFAULT_CONFIG.dailyGoal + 15} cards a day`);
       }
     );

@@ -11,6 +11,21 @@ export interface Flashcard {
   nextReview: Date;
   lastReview: Date | null;
   createdAt: Date;
+  /**
+   * The source note's identity, when the card came from an import.
+   *
+   * Anki gives every note a stable GUID that survives editing and re-export, so
+   * re-importing an updated deck can refresh the text of a card already being
+   * studied instead of adding a second copy of it.
+   */
+  guid?: string;
+  /**
+   * Media files the front or back refers to.
+   *
+   * Derived from the text and stored alongside it so the files a card needs can
+   * be found without re-parsing every card.
+   */
+  media?: string[];
 }
 
 /** SM-2 recall grade: 0 (total blackout) through 5 (perfect recall). */

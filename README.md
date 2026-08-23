@@ -29,7 +29,7 @@ the file format is unchanged and 1.x collections load as they are.
 | Writes per grade | full file rewrite, every time        | Batched; ~1s exposure on a hard kill              |
 
 Under the hood: Ink 7 and React 19, no classes anywhere, `core/` is pure and framework-free,
-584 tests. See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
+1023 tests. See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
 
 ---
 
@@ -124,17 +124,72 @@ Themes use Ink colour **names**, not hex, so your terminal's own colour scheme s
 ## CLI
 
 ```bash
-anki              # interactive
-anki --study      # jump straight into due cards
+anki                      # interactive
+anki --study              # jump straight into due cards
+anki import deck.apkg     # import a deck downloaded from AnkiWeb
+anki import deck.csv      # import an Anki text export
+anki export deck.csv      # export your cards for Anki
 anki --version
 anki --help
 ```
 
-`--help` and `--version` never load Ink or React — they return in about **50ms**, and a test
+### Importing a shared deck
+
+```bash
+anki import ~/Downloads/ultimate-geography.apkg
+```
+
+Reads **`.apkg` packages straight from AnkiWeb**, both the modern zstd format and the older
+one, with no dependencies — Node's own `sqlite` and `zlib` do the work. Cards keep their
+**scheduling**, so a deck you have already been studying arrives with its intervals intact
+rather than resetting to new. Deck names become tags, per card, so a package holding a deck
+tree does not label everything with one name. Images are stored and referenced in the card.
+
+Notes it cannot represent are counted and reported rather than silently mangled:
+
+```text
+Read 7 notes.
+5 added.
+1 cloze notes skipped — cloze cards are not supported.
+1 notes had a reverse card that was not created.
+1 notes skipped for having no front or no back.
+1 audio references dropped — audio is not supported.
+1 media files referenced.
+```
+
+### Text files
+
+The other format is **Anki's own tab-separated text export**, so one file works in both
+applications — export here and import in Anki desktop, or the reverse, with no converter.
+
+```bash
+anki import deck.csv --dry-run          # report what would happen, write nothing
+anki import deck.csv --tag spanish      # tag everything it brings in
+anki import deck.csv --front 2 --back 3 # when the columns are not 1 and 2
+```
+
+Import reads the `#separator`, `#html`, `#tags column` and `#guid column` headers Anki writes,
+converts HTML fields to plain text, and prints the first few cards so a wrong column mapping is
+obvious _before_ three thousand of them land in your collection. `--dry-run` runs exactly the
+same code and writes nothing.
+
+Re-importing the same deck does not duplicate it. A deck carrying Anki's note GUIDs is matched
+on those, so an updated deck refreshes the text of cards you are already studying **while
+keeping their scheduling**. Without GUIDs, cards are matched on their question text and left
+alone. An import is a single undo step, however many cards it brought in.
+
+Notes it cannot represent are counted and reported rather than silently mangled: **cloze
+deletions** (`{{c1::…}}`) are skipped, **reverse cards** are not generated (the forward card
+still imports), and **audio** references are dropped.
+
+`--help` and `--version` never load Ink or React — they return in about **30ms**, and a test
 walks the static import graph to keep it that way. The interactive launch reaches its first
-frame in roughly **730ms**, of which about 450ms is `import('ink')` alone; the project's own 74
-modules account for around 45ms of it. That is why this ships as plain `tsc` output rather than
-a bundle — bundling would be optimising the 6% of startup that is ours.
+frame in roughly **350ms** warm, of which about 240ms is `import('ink')` alone; the project's
+own 90 modules account for around 26ms of it. A cold first launch is roughly twice that, while
+the page cache fills.
+
+That split is why this ships as plain `tsc` output rather than a bundle: bundling would be
+optimising the 7% of startup that is ours.
 
 ---
 
@@ -324,7 +379,7 @@ and "no import cycles".
 
 ### Testing
 
-584 tests, ~96% statement coverage on the non-presentational code.
+1023 tests, ~96% statement coverage on the non-presentational code.
 
 - **Pure functions** — `core/`, `config/` and `ui/charts/` are tested directly.
 - **The store** is driven with no renderer at all: batching, write-through, undo depth.
