@@ -47,6 +47,19 @@ describe('detectSeparator', () => {
     expect(detectSeparator(['#separator:tab', '', 'a;b', 'c;d'])).toBe(';');
   });
 
+  it('ignores a separator that only appears inside a quoted field', () => {
+    // "Paris, France" holds a comma that is not a separator. Splitting on the
+    // raw text made a tab-separated file look comma-separated.
+    const lines = ['"Paris, France"\tThe capital', '"Berlin, Germany"\tAlso a capital'];
+    expect(detectSeparator(lines)).toBe('\t');
+  });
+
+  it('reads a file whose fields are full of the other candidates', () => {
+    const file = parseAnkiText('"a,b;c|d"\tsecond\n"e,f;g|h"\tfourth');
+    expect(file.headers.separator).toBe('\t');
+    expect(file.rows[0].fields).toEqual(['a,b;c|d', 'second']);
+  });
+
   it('falls back on an empty body', () => {
     expect(detectSeparator([])).toBe(DEFAULT_SEPARATOR);
     expect(detectSeparator(['', '   '])).toBe(DEFAULT_SEPARATOR);

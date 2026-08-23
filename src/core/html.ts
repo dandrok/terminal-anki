@@ -264,12 +264,18 @@ export function decodeEntities(input: string): string {
       const code = Number.parseInt(isHex ? body.slice(2) : body.slice(1), isHex ? 16 : 10);
       // Lone surrogates and out-of-range values would produce broken output;
       // leaving the entity as written is more useful than a replacement char.
-      return Number.isFinite(code) &&
-        code > 0 &&
-        code <= 0x10ffff &&
-        !(code >= 0xd800 && code <= 0xdfff)
-        ? String.fromCodePoint(code)
-        : whole;
+      if (
+        !Number.isFinite(code) ||
+        code <= 0 ||
+        code > 0x10ffff ||
+        (code >= 0xd800 && code <= 0xdfff)
+      ) {
+        return whole;
+      }
+      // The numeric forms of the soft hyphen go the same way as `&shy;`:
+      // U+00AD is invisible but real, and would sit inside card text and
+      // inside the key used to recognise a card on re-import.
+      return code === 0x00ad ? '' : String.fromCodePoint(code);
     }
     return ENTITIES[body] ?? whole;
   });

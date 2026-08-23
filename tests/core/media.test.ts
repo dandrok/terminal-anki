@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isStorableMediaName,
   describeMedia,
   hasMedia,
   imageMarker,
@@ -65,6 +66,22 @@ describe('parseSegments', () => {
 
   it('leaves an unclosed marker as text', () => {
     expect(parseSegments('\u27E6img:a.png')).toEqual([{ kind: 'text', value: '\u27E6img:a.png' }]);
+  });
+});
+
+describe('isStorableMediaName', () => {
+  it.each(['a.png', 'ab12cd34.png', 'a-b_c.jpeg'])('accepts %j', name => {
+    expect(isStorableMediaName(name)).toBe(true);
+  });
+
+  it.each(['.', '..'])('rejects the path component %j', name => {
+    // These pass the character test but are not files, and the marker writer
+    // and reader have to agree on exactly one rule.
+    expect(isStorableMediaName(name)).toBe(false);
+  });
+
+  it.each(['../x.png', '/etc/passwd', 'a b.png', 'a&b.png', ''])('rejects %j', name => {
+    expect(isStorableMediaName(name)).toBe(false);
   });
 });
 

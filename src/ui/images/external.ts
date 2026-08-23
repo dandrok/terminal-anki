@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -64,21 +64,25 @@ export interface RenderOptions {
 /**
  * Render an image to coloured text.
  *
+ * Asynchronous on purpose. This used to run synchronously from a render, which
+ * meant the whole interface stopped for however long the tool took — up to the
+ * timeout — every time a card with a picture came up.
+ *
  * Arguments go as an array, never a shell string: the filename comes from a
- * deck somebody else wrote, and interpolating it into a shell would make a
- * card called `x.png; rm -rf ~` do exactly that.
+ * deck somebody else wrote, and interpolating it into a shell would make a card
+ * called `x.png; rm -rf ~` do exactly that.
  */
 export function renderExternal({
   renderer,
   file,
   columns,
   rows
-}: RenderOptions): string[] | undefined {
+}: RenderOptions): Promise<string[] | undefined> {
   const width = Math.max(1, Math.trunc(columns));
   const height = Math.max(1, Math.trunc(rows));
 
-  try {
-    const output = execFileSync(
+  return new Promise(resolve => {
+    execFile(
       renderer.command,
       [
         `--size=${width}x${height}`,
@@ -92,17 +96,18 @@ export function renderExternal({
       {
         timeout: TIMEOUT_MS,
         maxBuffer: MAX_OUTPUT,
-        encoding: 'utf-8',
-        // Its diagnostics would land in the middle of a rendered frame.
-        stdio: ['ignore', 'pipe', 'ignore']
+        encoding: 'utf-8'
+      },
+      (error, stdout) => {
+        if (error) {
+          // Missing, too slow, or it did not like the file. A card without its
+          // picture is still a card.
+          resolve(undefined);
+          return;
+        }
+        const lines = stdout.replace(/\n+$/, '').split('\n');
+        resolve(lines.length > 0 && lines[0] !== '' ? lines : undefined);
       }
     );
-
-    const lines = output.replace(/\n+$/, '').split('\n');
-    return lines.length > 0 ? lines : undefined;
-  } catch {
-    // Missing, too slow, or it did not like the file. A card without its
-    // picture is still a card.
-    return undefined;
-  }
+  });
 }

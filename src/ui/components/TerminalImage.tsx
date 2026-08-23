@@ -1,7 +1,13 @@
 import fs from 'node:fs';
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Text, useStdout } from 'ink';
-import { fitCells, placeholderRows, transmitSequences, virtualPlacement } from '../images/kitty.js';
+import {
+  deleteImage,
+  fitCells,
+  placeholderRows,
+  transmitSequences,
+  virtualPlacement
+} from '../images/kitty.js';
 import { renderExternal, type ExternalRenderer } from '../images/external.js';
 import { imagePixelSize } from '../images/size.js';
 import { useTheme } from '../hooks/useTheme.js';
@@ -15,11 +21,18 @@ import type { ImageSupport } from '../images/detect.js';
  * megabyte of base64 each time would make the loop crawl.
  */
 
-/** Image ids handed out so far, keyed by the file they belong to. */
+/**
+ * Files the terminal is currently holding, oldest first.
+ *
+ * Bounded, because the terminal keeps every image sent to it: a long session
+ * through a deck of a few thousand illustrated cards would otherwise leave the
+ * terminal holding all of them. Insertion order is eviction order — a Map
+ * preserves it, so the oldest entry is simply the first key.
+ */
 const transmitted = new Map<string, number>();
 
-/** Files whose bytes the terminal already holds. */
-const sentFiles = new Set<string>();
+/** Roughly a session's worth of cards, and a few megabytes in the terminal. */
+export const MAX_HELD_IMAGES = 64;
 
 /**
  * Ids start high enough not to collide with another program's.
@@ -37,6 +50,29 @@ function idFor(file: string): number {
   transmitted.set(file, id);
   return id;
 }
+
+/**
+ * Ask the terminal to forget the images it has been holding longest.
+ *
+ * The card showing them has moved on, and a placeholder for a released image
+ * simply draws nothing — which is why this is safe to do while the session
+ * continues.
+ */
+function evictOldest(write: (text: string) => void): void {
+  while (transmitted.size > MAX_HELD_IMAGES) {
+    const oldest = transmitted.entries().next().value;
+    if (!oldest) {
+      return;
+    }
+    const [file, id] = oldest;
+    write(deleteImage(id));
+    transmitted.delete(file);
+    sentFiles.delete(file);
+  }
+}
+
+/** Files whose bytes the terminal already holds. */
+const sentFiles = new Set<string>();
 
 /** Forget everything sent, so a new run does not reuse a stale placement. */
 export function resetTransmittedImages(): void {
@@ -108,17 +144,38 @@ export function TerminalImage({
         write(sequence);
       }
       sentFiles.add(file);
+      evictOldest(write);
     }
 
     write(virtualPlacement(id, cells.columns, cells.rows));
     setPlaced(wanted);
   }, [usable, support, file, id, cells.columns, cells.rows, placed, wanted, write]);
 
-  const external = useMemo(() => {
+  /**
+   * Block art, once the tool has produced it.
+   *
+   * In state rather than computed during render: the tool is a subprocess, and
+   * waiting for one inside a render stopped the whole interface for however
+   * long it took every time a card with a picture came up.
+   */
+  const [external, setExternal] = useState<string[]>();
+  useEffect(() => {
     if (!usable || support !== 'external' || !renderer) {
-      return undefined;
+      return;
     }
-    return renderExternal({ renderer, file, columns: cells.columns, rows: cells.rows });
+
+    let live = true;
+    void renderExternal({ renderer, file, columns: cells.columns, rows: cells.rows }).then(
+      lines => {
+        // The card may have been graded and gone while the tool was working.
+        if (live) {
+          setExternal(lines);
+        }
+      }
+    );
+    return () => {
+      live = false;
+    };
   }, [usable, support, renderer, file, cells.columns, cells.rows]);
 
   if (!usable) {

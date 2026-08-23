@@ -27,9 +27,13 @@ export function CardText({ value, color, bold, maxColumns = 40, maxRows = 12 }: 
   // The common case by a wide margin: no picture, so no Box wrapper and no
   // change to how a plain card has always been laid out.
   if (segments.every(segment => segment.kind === 'text')) {
+    // The joined segments, not the original value. A marker the parser refused
+    // — a filename that could climb out of the media directory — also arrives
+    // here as text-only, and rendering `value` put that marker back on screen,
+    // which is the one thing rejecting it was for.
     return (
       <Text color={color} bold={bold}>
-        {value}
+        {segments.map(segment => segment.value).join('')}
       </Text>
     );
   }

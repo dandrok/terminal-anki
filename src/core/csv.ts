@@ -74,29 +74,53 @@ export function resolveSeparator(value: string): string {
 /**
  * Guess the separator from the body when the file does not declare one.
  *
- * Counts candidates on the first few rows and takes the one that appears the
- * same number of times on every row — a separator produces a consistent column
- * count, while a character that merely occurs in the prose does not.
+ * Counts columns on the first few records and takes the candidate that gives
+ * the same count on every one — a separator produces a consistent column count,
+ * while a character that merely occurs in the prose does not.
+ *
+ * Counted with the same quote-aware scanner the parser uses, not by splitting.
+ * A field like `"Paris, France"` contains a comma that is not a separator, and
+ * splitting on it made a tab-separated file look like a comma-separated one.
  */
 export function detectSeparator(lines: readonly string[]): string {
-  const sample = lines.filter(line => line.trim() && !line.startsWith('#')).slice(0, 20);
-  if (sample.length === 0) {
-    return DEFAULT_SEPARATOR;
-  }
+  const body = lines.filter(line => !line.startsWith('#'));
 
   let best = DEFAULT_SEPARATOR;
   let bestColumns = 0;
 
   for (const candidate of ['\t', ';', ',', '|']) {
-    const counts = sample.map(line => line.split(candidate).length);
+    const counts = recordFieldCounts(body, candidate).slice(0, 20);
     const first = counts[0];
-    if (first > 1 && counts.every(count => count === first) && first > bestColumns) {
-      best = candidate;
-      bestColumns = first;
+    if (counts.length > 0 && first > 1 && counts.every(count => count === first)) {
+      if (first > bestColumns) {
+        best = candidate;
+        bestColumns = first;
+      }
     }
   }
 
   return best;
+}
+
+/** How many fields each complete record has, under one candidate separator. */
+function recordFieldCounts(lines: readonly string[], separator: string): number[] {
+  const counts: number[] = [];
+  let carry: OpenRow | undefined;
+
+  for (const line of lines) {
+    if (!carry && line.trim() === '' && !line.includes(separator)) {
+      continue;
+    }
+    const scanned = scanRow(line, separator, carry);
+    if (scanned.open) {
+      carry = { fields: scanned.fields, field: scanned.field };
+      continue;
+    }
+    counts.push(scanned.fields.length);
+    carry = undefined;
+  }
+
+  return counts;
 }
 
 /** A row part-read: the fields completed so far, plus the one still open. */

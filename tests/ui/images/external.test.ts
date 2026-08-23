@@ -52,21 +52,36 @@ describe('findExternalRenderer', () => {
 describe('renderExternal', () => {
   const renderer = () => ({ name: 'chafa', command: path.join(bin, 'chafa') });
 
-  it('returns the tool output as lines', () => {
+  it('returns the tool output as lines', async () => {
     installStub('printf "row one\\nrow two\\n"');
-    const lines = renderExternal({
-      renderer: renderer(),
-      file: 'x.png',
-      columns: 10,
-      rows: 4
-    });
-    expect(lines).toEqual(['row one', 'row two']);
+    await expect(
+      renderExternal({ renderer: renderer(), file: 'x.png', columns: 10, rows: 4 })
+    ).resolves.toEqual(['row one', 'row two']);
   });
 
-  it('passes the size and the file as separate arguments', () => {
+  it('does not block while the tool works', async () => {
+    // It used to run synchronously from a render, so the whole interface
+    // stopped for however long the tool took, up to the timeout.
+    installStub('sleep 0.3; echo art');
+    let settled = false;
+    const pending = renderExternal({
+      renderer: renderer(),
+      file: 'x.png',
+      columns: 5,
+      rows: 2
+    }).then(value => {
+      settled = true;
+      return value;
+    });
+
+    expect(settled).toBe(false);
+    await expect(pending).resolves.toEqual(['art']);
+  });
+
+  it('passes the size and the file as separate arguments', async () => {
     // Never a shell string: the filename comes from somebody else's deck.
     installStub('printf "%s\\n" "$@"');
-    const lines = renderExternal({
+    const lines = await renderExternal({
       renderer: renderer(),
       file: 'a file.png',
       columns: 20,
@@ -76,10 +91,10 @@ describe('renderExternal', () => {
     expect(lines).toContain('a file.png');
   });
 
-  it('does not let a filename reach a shell', () => {
+  it('does not let a filename reach a shell', async () => {
     const canary = path.join(workspace, 'pwned');
     installStub('printf "%s\\n" "$@"');
-    renderExternal({
+    await renderExternal({
       renderer: renderer(),
       file: `x.png; touch ${canary}`,
       columns: 10,
@@ -88,36 +103,43 @@ describe('renderExternal', () => {
     expect(fs.existsSync(canary)).toBe(false);
   });
 
-  it('gives back nothing when the tool fails', () => {
+  it('gives back nothing when the tool fails', async () => {
     installStub('exit 3');
-    expect(
+    await expect(
       renderExternal({ renderer: renderer(), file: 'x.png', columns: 10, rows: 4 })
-    ).toBeUndefined();
+    ).resolves.toBeUndefined();
   });
 
-  it('gives back nothing when the tool is not there', () => {
-    expect(
+  it('gives back nothing when the tool is not there', async () => {
+    await expect(
       renderExternal({
         renderer: { name: 'chafa', command: path.join(bin, 'missing') },
         file: 'x.png',
         columns: 10,
         rows: 4
       })
-    ).toBeUndefined();
+    ).resolves.toBeUndefined();
   });
 
-  it('ignores whatever the tool writes to stderr', () => {
+  it('ignores whatever the tool writes to stderr', async () => {
     // Its diagnostics would land in the middle of a rendered frame.
     installStub('echo "warning" >&2; echo art');
-    expect(renderExternal({ renderer: renderer(), file: 'x.png', columns: 5, rows: 2 })).toEqual([
-      'art'
-    ]);
+    await expect(
+      renderExternal({ renderer: renderer(), file: 'x.png', columns: 5, rows: 2 })
+    ).resolves.toEqual(['art']);
   });
 
-  it('trims the trailing blank lines a tool leaves behind', () => {
+  it('trims the trailing blank lines a tool leaves behind', async () => {
     installStub('printf "art\\n\\n\\n"');
-    expect(renderExternal({ renderer: renderer(), file: 'x.png', columns: 5, rows: 2 })).toEqual([
-      'art'
-    ]);
+    await expect(
+      renderExternal({ renderer: renderer(), file: 'x.png', columns: 5, rows: 2 })
+    ).resolves.toEqual(['art']);
+  });
+
+  it('gives back nothing when the tool prints nothing', async () => {
+    installStub('true');
+    await expect(
+      renderExternal({ renderer: renderer(), file: 'x.png', columns: 5, rows: 2 })
+    ).resolves.toBeUndefined();
   });
 });

@@ -15,19 +15,43 @@ import { withRender } from './render.js';
 const RETURN = String.fromCharCode(13);
 
 /**
- * Keystrokes that walk the cursor down to a named row.
+ * Rows in the order the screen lists them.
  *
- * By name rather than by counting: these tests used a fixed number of `j`
- * presses, so adding a setting silently pointed them at the wrong row.
+ * A hand-kept copy, so `downTo` below checks it landed rather than trusting it:
+ * these tests used a fixed number of `j` presses and adding a setting pointed
+ * them at the wrong row without failing.
  */
 const FIELD_ORDER = ['Theme', 'Images', 'Daily goal', 'History span', 'Session size', 'Card order'];
 
-function downTo(label: string): string {
+/** The cursor marker sits at the start of the highlighted row. */
+function selectedRow(frame: string): string | undefined {
+  return frame
+    .split('\n')
+    .find(line => line.includes('❯'))
+    ?.replace(/.*❯\s*/, '')
+    .split(':')[0]
+    .trim();
+}
+
+/**
+ * Walk the cursor down to a named row and confirm it got there.
+ *
+ * The assertion is the point: without it, reordering the rows would send every
+ * test that navigates to the wrong setting and they would all still pass.
+ */
+async function downTo(
+  label: string,
+  press: (input: string) => Promise<void>,
+  frame: () => string
+): Promise<void> {
   const at = FIELD_ORDER.indexOf(label);
   if (at < 0) {
     throw new Error(`no settings row called ${label}`);
   }
-  return 'j'.repeat(at);
+  for (let step = 0; step < at; step++) {
+    await press('j');
+  }
+  expect(selectedRow(frame())).toBe(label);
 }
 
 function withConfigContext(
@@ -81,11 +105,9 @@ describe('Settings', () => {
     const onBack = vi.fn();
     await withRender(
       withConfigContext(<Settings onBack={onBack} />, DEFAULT_CONFIG, update),
-      async ({ press }) => {
+      async ({ frame, press }) => {
         await press('l');
-        for (const key of downTo('Daily goal')) {
-          await press(key);
-        }
+        await downTo('Daily goal', press, frame);
         await press('l');
         await press(RETURN);
       }
@@ -136,7 +158,7 @@ describe('Settings', () => {
     await withRender(
       withConfigContext(<Settings onBack={vi.fn()} />, DEFAULT_CONFIG),
       async ({ frame, press }) => {
-        await press(downTo('Images'));
+        await downTo('Images', press, frame);
         expect(frame()).toContain('Images');
         // "automatic" alone says nothing; the outcome is the useful half.
         expect(frame()).toMatch(/automatic · (full resolution|coloured blocks|filenames only)/);
@@ -154,7 +176,7 @@ describe('Settings', () => {
         withConfig(DEFAULT_CONFIG, { dailyGoal: 200 })
       ),
       async ({ frame, press }) => {
-        await press(downTo('Daily goal'));
+        await downTo('Daily goal', press, frame);
         await press('lll');
         expect(frame()).toContain('200 cards a day');
       }
@@ -166,8 +188,8 @@ describe('Settings', () => {
       withConfigContext(<Settings onBack={vi.fn()} />, DEFAULT_CONFIG),
       async ({ frame, press }) => {
         // One chunk: down to the goal row, then three steps along it.
-        await press(`${downTo('Daily goal')}lll`);
-        expect(frame()).toContain('Daily goal');
+        await press(`${'j'.repeat(FIELD_ORDER.indexOf('Daily goal'))}lll`);
+        expect(selectedRow(frame())).toBe('Daily goal');
         expect(frame()).toContain(`${DEFAULT_CONFIG.dailyGoal + 15} cards a day`);
       }
     );

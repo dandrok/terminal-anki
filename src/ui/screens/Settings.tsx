@@ -40,7 +40,7 @@ const LABELS: Record<Field, string> = {
 
 const HINTS: Record<Field, string> = {
   theme: 'Colours for every screen — previewed as you change it',
-  images: 'How pictures on a card are drawn. Takes effect on the next start',
+  images: 'How pictures on a card are drawn — applied as soon as you save',
   dailyGoal: 'Cards in a day that fills a square on the activity grid',
   heatmapWeeks: 'How far back the activity grid reaches',
   defaultSessionLength: 'Offered first when you start studying',
@@ -57,6 +57,13 @@ export interface SettingsProps {
   onBack: () => void;
 }
 
+const IMAGE_LABELS: Record<(typeof IMAGE_MODES)[number], string> = {
+  auto: 'automatic',
+  kitty: 'kitty protocol',
+  external: 'coloured blocks',
+  off: 'filenames only'
+};
+
 /**
  * Change how the application looks and what it defaults to.
  *
@@ -67,13 +74,6 @@ export interface SettingsProps {
  * a preview built from mock components would only ever prove that the mock
  * looks right. Leaving without saving drops the override with the subtree.
  */
-const IMAGE_LABELS: Record<(typeof IMAGE_MODES)[number], string> = {
-  auto: 'automatic',
-  kitty: 'kitty protocol',
-  external: 'coloured blocks',
-  off: 'filenames only'
-};
-
 export function Settings({ onBack }: SettingsProps) {
   const saved = useConfig();
   const images = useImages();

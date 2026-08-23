@@ -62,6 +62,20 @@ describe('CardText', () => {
     });
   });
 
+  it('does not put a rejected marker back on screen', async () => {
+    // A filename that could climb out of the media directory parses to nothing,
+    // so every segment is text — and the shortcut for text-only fields rendered
+    // the original value, marker and all, which is the one thing rejecting it
+    // was supposed to prevent.
+    const value = `before ${imageMarker('../../etc/passwd')} after`;
+    await withRender(withImages(<CardText value={value} />), ({ frame }) => {
+      expect(frame()).not.toContain('img:');
+      expect(frame()).not.toContain('passwd');
+      expect(frame()).toContain('before');
+      expect(frame()).toContain('after');
+    });
+  });
+
   it('names a picture whose file has gone missing', async () => {
     // The marker survives in the card text even if the media directory does
     // not, so this has to degrade rather than throw.

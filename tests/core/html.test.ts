@@ -32,6 +32,17 @@ describe('decodeEntities', () => {
     expect(decodeEntities(input)).toBe(expected);
   });
 
+  it.each(['a&shy;b', 'a&#173;b', 'a&#xAD;b', 'a&#xad;b'])(
+    'strips the soft hyphen in %j, whichever way it is written',
+    input => {
+      // Invisible but real: it would sit inside card text and inside the key
+      // used to recognise a card on re-import, matching nothing. The named form
+      // was handled and the numeric ones were not.
+      expect(decodeEntities(input)).toBe('ab');
+      expect(decodeEntities(input)).not.toContain(String.fromCharCode(0x00ad));
+    }
+  );
+
   it('decodes nbsp to a plain space, not U+00A0', () => {
     // A real non-breaking space defeats Ink's word wrapping and measures oddly
     // in some terminals.

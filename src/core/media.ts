@@ -28,6 +28,10 @@ const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
  * and nothing listed in the card's media.
  */
 export function isStorableMediaName(name: string): boolean {
+  // "." and ".." pass the character test but are path components, not files.
+  if (name === '.' || name === '..') {
+    return false;
+  }
   return SAFE_NAME.test(name);
 }
 
