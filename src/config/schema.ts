@@ -1,5 +1,6 @@
 import { DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '../ui/theme/palette.js';
 import { DEFAULT_DAILY_GOAL, HEATMAP_WEEKS } from '../ui/charts/heatmap.js';
+import type { ImageMode } from '../ui/images/detect.js';
 
 /** Bumped only when an old config can no longer be read as-is. */
 export const CONFIG_VERSION = 1;
@@ -15,6 +16,14 @@ export interface AppConfig {
   defaultSessionLength: number | null;
   /** Shuffle a session's cards rather than taking them in order. */
   shuffle: boolean;
+  /**
+   * How to draw images on a card.
+   *
+   * `auto` reads the environment, which is a guess and sometimes a wrong one —
+   * particularly through tmux, where passthrough has to be turned on by hand.
+   * The other values exist so that guess can be overruled.
+   */
+  images: ImageMode;
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -25,7 +34,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   dailyGoal: DEFAULT_DAILY_GOAL,
   heatmapWeeks: HEATMAP_WEEKS,
   defaultSessionLength: null,
-  shuffle: true
+  shuffle: true,
+  images: 'auto'
 };
 
 /** Inclusive bounds, also used by the settings screen to step each value. */
@@ -35,6 +45,8 @@ export const LIMITS = {
 } as const;
 
 export const SESSION_LENGTHS: (number | null)[] = [null, 10, 25, 50];
+
+export const IMAGE_MODES: ImageMode[] = ['auto', 'kitty', 'external', 'off'];
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -87,7 +99,10 @@ export function normalizeConfig(input: unknown): AppConfig {
     // treated as a missing value.
     defaultSessionLength:
       length === null ? null : typeof length === 'number' ? readNumber(length, 10, 1, 500) : null,
-    shuffle: typeof raw.shuffle === 'boolean' ? raw.shuffle : DEFAULT_CONFIG.shuffle
+    shuffle: typeof raw.shuffle === 'boolean' ? raw.shuffle : DEFAULT_CONFIG.shuffle,
+    images: IMAGE_MODES.includes(raw.images as ImageMode)
+      ? (raw.images as ImageMode)
+      : DEFAULT_CONFIG.images
   };
 }
 

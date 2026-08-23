@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { Layout } from '../components/Layout.js';
+import { CardText } from '../components/CardText.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { TextField, applyKey } from '../components/TextField.js';
 import { screenControls, type Control } from '../controls.js';
@@ -11,6 +12,7 @@ import { useAppState, useDispatch } from '../hooks/useStore.js';
 import { selectCanUndo, selectCards, selectSearchResults } from '../../state/selectors.js';
 import { difficultyOf, isDue } from '../../core/sm2.js';
 import { truncate } from '../format.js';
+import { describeMedia } from '../../core/media.js';
 import type { Flashcard } from '../../types/index.js';
 
 /** How many rows fit around the header, footer and detail block. */
@@ -205,7 +207,9 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
                   </Text>
                   <Text color={theme[bucket]}>{isDue(entry) ? '●' : '○'} </Text>
                   <Text color={isSelected ? theme.text : theme.muted} bold={isSelected}>
-                    {truncate(entry.front, 44)}
+                    {/* One line per card here, so a picture is named rather
+                        than drawn — a row is not the place for one. */}
+                    {truncate(describeMedia(entry.front), 44)}
                   </Text>
                 </Box>
               );
@@ -217,7 +221,8 @@ export function Browse({ onBack, onEdit, initialQuery }: BrowseProps) {
           <Box flexDirection="column" marginTop={1}>
             <Text color={theme.muted}>{'─'.repeat(46)}</Text>
             {revealed ? (
-              <Text color={theme.success}>{card.back}</Text>
+              // Sized smaller than the study screen: this sits under a list.
+              <CardText value={card.back} color={theme.success} maxColumns={32} maxRows={8} />
             ) : (
               <Text color={theme.muted}>press ⏎ to show the answer</Text>
             )}

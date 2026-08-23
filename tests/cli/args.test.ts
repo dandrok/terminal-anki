@@ -51,6 +51,17 @@ describe('parseArgs', () => {
       });
     });
 
+    it.each(['2.5', '2e2', '0x10', ' 2', '+2'])(
+      'reports a column of %j rather than coercing it',
+      value => {
+        // parseInt reads "2.5" as 2 and "0x10" as 16, so a typo silently
+        // imported a different field.
+        const args = parseArgs(['import', 'd.csv', '--front', value]);
+        expect(args.front).toBeUndefined();
+        expect(args.unknown.join()).toContain('--front');
+      }
+    );
+
     it.each(['0', 'abc', ''])('reports a nonsense --front of %j', value => {
       // Silently falling back would import the wrong field because of a typo,
       // and nothing would say so.

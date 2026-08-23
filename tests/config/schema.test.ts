@@ -29,7 +29,8 @@ describe('normalizeConfig', () => {
       dailyGoal: 40,
       heatmapWeeks: 8,
       defaultSessionLength: 25,
-      shuffle: false
+      shuffle: false,
+      images: 'kitty' as const
     };
     expect(normalizeConfig(config)).toEqual(config);
   });
@@ -38,6 +39,15 @@ describe('normalizeConfig', () => {
     for (const theme of THEME_IDS) {
       expect(normalizeConfig({ theme }).theme).toBe(theme);
     }
+  });
+
+  it.each(['auto', 'kitty', 'external', 'off'])('accepts the image mode %j', images => {
+    expect(normalizeConfig({ images }).images).toBe(images);
+  });
+
+  it('falls back on an image mode it does not know', () => {
+    expect(normalizeConfig({ images: 'sixel' }).images).toBe(DEFAULT_CONFIG.images);
+    expect(normalizeConfig({ images: 42 }).images).toBe(DEFAULT_CONFIG.images);
   });
 
   it('falls back on a theme that no longer exists', () => {

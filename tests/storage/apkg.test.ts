@@ -178,6 +178,13 @@ describe('readMediaMap', () => {
     expect([...readMediaMap(Buffer.from(zlib.zstdCompressSync(raw)))]).toEqual([['0', 'x.png']]);
   });
 
+  it('gives back nothing for a corrupt JSON map rather than throwing', () => {
+    // The protobuf branch cannot throw, and these two should behave alike: a
+    // map we cannot read costs the pictures, not the deck.
+    expect(() => readMediaMap(Buffer.from('{"0": "a.png"'))).not.toThrow();
+    expect(readMediaMap(Buffer.from('{"0": "a.png"')).size).toBe(0);
+  });
+
   it('gives back nothing for an empty or unrecognised map', () => {
     expect(readMediaMap(Buffer.alloc(0)).size).toBe(0);
     expect(readMediaMap(Buffer.from([0xff, 0xff, 0xff])).size).toBe(0);

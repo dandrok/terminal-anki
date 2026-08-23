@@ -173,13 +173,19 @@ export function readMediaMap(data: Buffer): Map<string, string> {
 
   if (data[0] === 0x7b) {
     // '{' — the legacy JSON map, keyed by the entry number as a string.
-    const parsed: unknown = JSON.parse(data.toString('utf-8'));
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-        if (typeof value === 'string') {
-          names.set(key, value);
+    // A map we cannot read costs the pictures, not the deck, so this returns
+    // what it has rather than throwing where the protobuf branch would not.
+    try {
+      const parsed: unknown = JSON.parse(data.toString('utf-8'));
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (typeof value === 'string') {
+            names.set(key, value);
+          }
         }
       }
+    } catch {
+      // Truncated or corrupt; the cards still import.
     }
     return names;
   }

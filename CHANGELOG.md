@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Images on cards
+
+A card with a picture now shows it. In **kitty**, **ghostty** and **WezTerm** that is the real
+image at full resolution; elsewhere, if [`chafa`](https://hpjansson.org/chafa/) is on `PATH`,
+coloured block art; otherwise `[image: diagram.png]` as before.
+
+This costs no dependencies and contains no image decoder. The encoded file is handed straight to
+the terminal, and only the dimensions are read — from the header — so pictures keep their shape
+against terminal cells that are twice as tall as they are wide.
+
+The drawing uses kitty's **unicode placeholders** rather than a graphics escape, which is the
+only thing that works inside a laid-out frame: Ink measures every string to position it, and a
+graphics escape is not a sequence it knows to skip — a short one measures as twenty visible
+columns and takes the layout with it. Placeholders measure as one cell each.
+
+A new **Images** setting overrides the detection, which matters most under tmux: graphics
+escapes are only forwarded there with `allow-passthrough on`, so the protocol is off by default
+inside a multiplexer rather than risk painting escape sequences across the screen as text.
+
 ### Import a deck from AnkiWeb
 
 `anki import deck.apkg` reads Anki packages directly — both the modern zstd format every
@@ -14,8 +33,8 @@ reads the collection and `zlib` handles the zip and the zstd.
 - **Deck names become tags, per card.** A package holds a deck tree, so tagging every note
   with one name would label cards that were nowhere near it. The "Default" deck is ignored.
 - **Images are stored** under `media/` in your data directory, named by a hash of their
-  contents so two decks shipping a different `heart.png` cannot overwrite each other. Cards
-  show `[image: …]` where the picture belongs until terminal image support lands.
+  contents so two decks shipping a different `heart.png` cannot overwrite each other, and drawn
+  on the card in terminals that can show them.
 - Re-importing is idempotent across formats: the same deck as `.apkg` and `.csv`, or as legacy
   and modern packages, updates rather than duplicates.
 

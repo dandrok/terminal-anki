@@ -66,7 +66,9 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       case '--front':
       case '--back': {
         const value = optionValue(argv, index + 1);
-        const column = Number.parseInt(value ?? '', 10);
+        // Plain decimal digits only. parseInt reads "2.5" as 2, "2e2" as 2 and
+        // "0x10" as 16, so a typo'd column silently became a different one.
+        const column = /^[0-9]+$/.test(value ?? '') ? Number.parseInt(value ?? '', 10) : Number.NaN;
         // Reported rather than ignored: silently falling back would import the
         // wrong field because of one typo, and nothing would say so.
         if (value === undefined || !Number.isFinite(column) || column < 1) {

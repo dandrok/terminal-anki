@@ -4,6 +4,10 @@ import { Router } from './Router.js';
 import { StoreContext } from './hooks/useStore.js';
 import { ThemeContext } from './hooks/useTheme.js';
 import { ConfigContext } from './hooks/useConfig.js';
+import { ImageContext } from './hooks/useImages.js';
+import { resolveImageSupport } from './images/detect.js';
+import { findExternalRenderer } from './images/external.js';
+import { createMediaStore } from '../storage/media-store.js';
 import type { Screen } from './screens/Screen.js';
 import { DEFAULT_CONFIG, withConfig, type AppConfig } from '../config/schema.js';
 import type { ConfigStore } from '../storage/config-store.js';
@@ -40,6 +44,23 @@ export function App({ store, configStore, initialConfig, initialScreen = 'menu' 
     [config, configStore]
   );
 
+  /**
+   * Worked out once, not per card.
+   *
+   * Detection reads the environment and walks PATH looking for a helper; doing
+   * that inside a render would repeat it on every keystroke of a session.
+   */
+  const imageValue = useMemo(() => {
+    const renderer = findExternalRenderer();
+    const support = resolveImageSupport(config.images, { hasExternalTool: Boolean(renderer) });
+    const media = createMediaStore();
+    return {
+      support,
+      ...(renderer ? { renderer } : {}),
+      resolve: (name: string) => media.resolve(name)
+    };
+  }, [config.images]);
+
   useEffect(() => {
     if (screen === 'exit') {
       exit();
@@ -50,18 +71,20 @@ export function App({ store, configStore, initialConfig, initialScreen = 'menu' 
     <StoreContext.Provider value={store}>
       <ConfigContext.Provider value={configValue}>
         <ThemeContext.Provider value={config.theme}>
-          <Router
-            screen={screen}
-            onNavigate={setScreen}
-            onQuit={() => {
-              setScreen('exit');
-            }}
-            editing={editing}
-            onEdit={card => {
-              setEditing(card);
-              setScreen('edit');
-            }}
-          />
+          <ImageContext.Provider value={imageValue}>
+            <Router
+              screen={screen}
+              onNavigate={setScreen}
+              onQuit={() => {
+                setScreen('exit');
+              }}
+              editing={editing}
+              onEdit={card => {
+                setEditing(card);
+                setScreen('edit');
+              }}
+            />
+          </ImageContext.Provider>
         </ThemeContext.Provider>
       </ConfigContext.Provider>
     </StoreContext.Provider>
