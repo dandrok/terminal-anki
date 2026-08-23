@@ -92,6 +92,16 @@ describe('readApkg decks', () => {
 });
 
 describe('readApkg scheduling', () => {
+  it('takes every value from the same card', () => {
+    // Note 4 has two cards: a reviewed forward one and a new reverse one.
+    // Aggregating each column separately built a schedule out of both — an
+    // interval from the card that was drilled beside a due date from the card
+    // that was not.
+    const reversed = legacy().notes.find(entry => entry.guid === 'guid-rev-1');
+    expect(reversed?.cardCount).toBe(2);
+    expect(reversed?.scheduling).toMatchObject({ interval: 9, repetitions: 2, easiness: 2.5 });
+  });
+
   it('carries a reviewed card across instead of resetting it', () => {
     const note = legacy().notes.find(entry => entry.guid === 'guid-basic-1');
     expect(note?.scheduling).toMatchObject({ interval: 45, repetitions: 7, easiness: 2.65 });

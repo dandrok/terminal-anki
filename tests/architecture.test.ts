@@ -102,7 +102,10 @@ describe('layering', () => {
     // the letter of the rule would be worse code.
     const offenders = FILES.filter(file => {
       const source = fs.readFileSync(file, 'utf-8');
-      const declarations = source.match(/^\s*(export\s+)?(abstract\s+)?class\s+\w+[^{]*/gm) ?? [];
+      // `export default class` matched neither branch, so such a declaration
+      // was neither flagged nor checked — it fell through the test entirely.
+      const pattern = /^\s*(export\s+(default\s+)?)?(abstract\s+)?class\s+\w+[^{]*/gm;
+      const declarations = source.match(pattern) ?? [];
       return declarations.some(declaration => !/\bextends\s+Error\b/.test(declaration));
     });
     expect(offenders).toEqual([]);

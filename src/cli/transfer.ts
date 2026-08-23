@@ -7,7 +7,7 @@ import { describeReport, planImport, type ImportedNote } from '../core/import.js
 import { describeMedia } from '../core/media.js';
 import { resolveConfigFile, resolveDataFile } from '../storage/paths.js';
 import { ApkgError, readApkg } from '../storage/apkg.js';
-import { createMediaStore } from '../storage/media-store.js';
+import { contentName, createMediaStore, isImageName } from '../storage/media-store.js';
 import type { ImportPlan } from '../core/import.js';
 import type { Flashcard } from '../types/index.js';
 import type { ParsedArgs } from './args.js';
@@ -141,12 +141,18 @@ function importPackage(args: ParsedArgs, file: string, now: Date): TransferResul
 
   const store = createMediaStore();
   const stored = new Map<string, string>();
-  if (!args.dryRun) {
-    for (const [original, contents] of deck.media) {
-      const name = store.put(original, contents);
-      if (name) {
-        stored.set(original, name);
-      }
+  for (const [original, contents] of deck.media) {
+    // A dry run works out the name each file *would* get without writing it.
+    // Skipping the map entirely made the preview a different import from the
+    // real one: images vanished from the sample cards and the media count read
+    // zero — the one thing a dry run exists to tell you in advance.
+    const name = args.dryRun
+      ? isImageName(original) && contents.length > 0
+        ? contentName(original, contents)
+        : undefined
+      : store.put(original, contents);
+    if (name) {
+      stored.set(original, name);
     }
   }
 
@@ -157,8 +163,6 @@ function importPackage(args: ParsedArgs, file: string, now: Date): TransferResul
     frontField: toFieldIndex(args.front, 0),
     backField: toFieldIndex(args.back, 1),
     html: true,
-    // On a dry run nothing was written, so every image resolves to nothing and
-    // the report counts the media it *would* have stored separately.
     resolveMedia: name => stored.get(name),
     ...(args.tag ? { extraTags: [args.tag] } : {}),
     now
@@ -171,7 +175,7 @@ function importPackage(args: ParsedArgs, file: string, now: Date): TransferResul
   if (deck.media.size > 0) {
     opening.push(
       args.dryRun
-        ? `${deck.media.size} media files found (a dry run stores none).`
+        ? `${stored.size} of ${deck.media.size} media files would be stored (dry run).`
         : `${stored.size} of ${deck.media.size} media files stored in ${store.directory}`
     );
   }

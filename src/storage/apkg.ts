@@ -384,11 +384,19 @@ export function readApkg(file: string): ApkgDeck {
 
     // One query for every note's card facts rather than one per note: a big
     // deck has tens of thousands of notes.
+    //
+    // Every scheduling value comes from the *same* card — the lowest `ord`,
+    // which is the forward card and the only one imported. Aggregating each
+    // column separately built a schedule out of two different cards: MAX(ivl)
+    // from a well-drilled reverse card beside MIN(due) from the forward one.
     const cardRows = db
       .prepare(
-        `SELECT nid, COUNT(DISTINCT ord) AS cards, MAX(ivl) AS ivl, MAX(factor) AS factor,
-                MAX(reps) AS reps, MIN(due) AS due, MIN(did) AS did
-         FROM cards GROUP BY nid`
+        `SELECT c.nid, n.cards, c.ivl, c.factor, c.reps, c.due, c.did
+         FROM cards c
+         JOIN (SELECT nid, COUNT(DISTINCT ord) AS cards, MIN(ord) AS lowest
+               FROM cards GROUP BY nid) n
+           ON n.nid = c.nid AND n.lowest = c.ord
+         GROUP BY c.nid`
       )
       .all() as unknown as CardRow[];
 

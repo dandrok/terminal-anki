@@ -147,12 +147,14 @@ tree does not label everything with one name. Images are stored and referenced i
 
 Notes it cannot represent are counted and reported rather than silently mangled:
 
-```
+```text
 Read 7 notes.
 5 added.
 1 cloze notes skipped — cloze cards are not supported.
 1 notes had a reverse card that was not created.
+1 notes skipped for having no front or no back.
 1 audio references dropped — audio is not supported.
+1 media files referenced.
 ```
 
 ### Text files

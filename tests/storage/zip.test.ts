@@ -80,10 +80,14 @@ describe('readEntryData', () => {
   });
 
   it('handles a stored (uncompressed) entry', () => {
-    // Anki writes some entries stored; the fixtures are built that way.
+    // Reading it, not merely noting that one exists: checking the method alone
+    // proved nothing about the branch that handles it.
     const buffer = zip();
-    const entries = readEntries(buffer);
-    expect(entries.some(entry => entry.compressionMethod === 0)).toBe(true);
+    const stored = readEntries(buffer).find(entry => entry.compressionMethod === 0);
+    expect(stored).toBeDefined();
+
+    const data = readEntryData(buffer, stored!);
+    expect(data).toHaveLength(stored!.uncompressedSize);
   });
 
   it('handles a deflated entry', () => {

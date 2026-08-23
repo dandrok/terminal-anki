@@ -344,6 +344,20 @@ describe('runImport from an Anki package', () => {
     expect(fs.existsSync(path.join(workspace, 'data', 'media'))).toBe(false);
   });
 
+  it('predicts on a dry run exactly what a real import produces', () => {
+    // A preview that differs from the thing it previews is worse than none.
+    // Skipping the media map on a dry run made images vanish from the sample
+    // cards and the media count read zero.
+    const dry = run(['import', fixture('legacy.apkg'), '--dry-run']).lines.join('\n');
+    const real = run(['import', fixture('legacy.apkg')]).lines.join('\n');
+
+    const stored = storedCards().find(card => card.media?.length)?.media?.[0];
+    expect(stored).toBeDefined();
+    expect(dry).toContain(stored!);
+    expect(dry).toContain('1 media files referenced');
+    expect(real).toContain('1 media files referenced');
+  });
+
   it('reports what it could not bring across', () => {
     const output = run(['import', fixture('legacy.apkg'), '--dry-run']).lines.join('\n');
     expect(output).toContain('cloze notes skipped');

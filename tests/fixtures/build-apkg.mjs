@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const US = '';
+const US = '\x1f';
 
 /** A 1x1 transparent PNG, so the fixture ships a real image. */
 const PNG = Buffer.from(

@@ -150,7 +150,9 @@ const ENTITIES: Record<string, string> = {
   ordf: 'ª',
   laquo: '«',
   not: '¬',
-  shy: '­',
+  // U+00AD is invisible but real: it would sit inside card text and inside
+  // the key used to recognise a card on re-import, matching nothing.
+  shy: '',
   reg: '®',
   macr: '¯',
   deg: '°',

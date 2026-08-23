@@ -179,7 +179,9 @@ describe('htmlToText media', () => {
     expect(result.images).toEqual(['real.png']);
   });
 
-  it('still reads data-src when that is all there is', () => {
+  it('ignores an img that only has data-src', () => {
+    // There is no src to read, and guessing at data-src would pick up the
+    // placeholder on every lazy-loaded card.
     expect(htmlToText('<img data-src="only.png">').images).toEqual([]);
   });
 
