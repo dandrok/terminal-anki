@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Import and export
+
+`anki import deck.csv` and `anki export deck.csv`, using **Anki's own tab-separated text
+format** so one file works in both applications with no converter in between.
+
+Import reads the `#separator`, `#html`, `#tags column` and `#guid column` headers Anki writes,
+converts HTML fields to plain text — Anki's editor writes `<div>` per line, so without this a
+real deck imports as tag soup — and prints the first few cards so a wrong column mapping is
+obvious before thousands of them land in your collection.
+
+- `--dry-run` reports exactly what would happen and writes nothing, running the same code path
+  as a real import.
+- `--front` / `--back` override the columns, `--tag` labels everything it brings in.
+- Re-importing does not duplicate. A deck with Anki's note GUIDs is matched on those, so an
+  updated deck refreshes cards you are already studying **while keeping their scheduling**.
+  Without GUIDs, cards are matched on question text and left alone.
+- A whole import is one undo step, however many cards it brought in.
+- Cloze notes, reverse cards and audio are counted and reported rather than silently mangled.
+
+`.apkg` files are not supported yet; importing one says so and points at Anki's plain-text
+export.
+
 ## 2.0.0
 
 A rewrite of everything above the learning rules. **Your data carries over untouched** — the

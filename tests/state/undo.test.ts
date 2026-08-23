@@ -4,6 +4,7 @@ import { emptyPersistedData } from '../../src/storage/serialization.js';
 import { selectCanUndo } from '../../src/state/selectors.js';
 import type { AppState } from '../../src/state/reducer.js';
 import type { AppAction } from '../../src/state/actions.js';
+import type { Flashcard } from '../../src/types/index.js';
 
 const NOW = new Date(2026, 7, 22, 12, 0);
 
@@ -228,5 +229,70 @@ describe('undo stack', () => {
     const snapshot = JSON.stringify(state);
     reduce(state, { type: 'card/delete', id: state.data.cards[0].id, now: NOW });
     expect(JSON.stringify(state)).toBe(snapshot);
+  });
+});
+
+describe('undo of an import', () => {
+  const imported = (id: string, front: string): Flashcard => ({
+    id,
+    front,
+    back: front.toUpperCase(),
+    tags: [],
+    easiness: 2.5,
+    interval: 1,
+    repetitions: 0,
+    nextReview: NOW,
+    lastReview: null,
+    createdAt: NOW
+  });
+
+  const importAction = (added: Flashcard[], updated: Flashcard[] = []): AppAction => ({
+    type: 'cards/import',
+    added,
+    updated,
+    now: NOW
+  });
+
+  it('removes everything the import added', () => {
+    const state = run(withCards('mine'), importAction([imported('i1', 'x'), imported('i2', 'y')]));
+    expect(fronts(state)).toEqual(['mine', 'x', 'y']);
+
+    expect(fronts(reduce(state, { type: 'undo', now: NOW }))).toEqual(['mine']);
+  });
+
+  it('is one undo entry however many cards it brought in', () => {
+    // The stack is 20 deep, so an entry per card would make undoing a
+    // 3,000-card deck impossible by construction.
+    const many = Array.from({ length: 50 }, (_v, index) => imported(`i${index}`, `card ${index}`));
+    const state = run(blank(), importAction(many));
+
+    expect(state.undo).toHaveLength(1);
+    expect(fronts(reduce(state, { type: 'undo', now: NOW }))).toEqual([]);
+  });
+
+  it('leaves a card added after the import alone', () => {
+    // Snapshotting the whole list meant undoing the import also deleted work
+    // done after it — the card typed by hand vanished with the deck.
+    const state = run(blank(), importAction([imported('i1', 'imported')]), add('typed by hand'));
+    expect(fronts(state)).toEqual(['imported', 'typed by hand']);
+
+    expect(fronts(reduce(state, { type: 'undo', now: NOW }))).toEqual(['typed by hand']);
+  });
+
+  it('restores the previous version of a card it rewrote', () => {
+    const base = run(blank(), importAction([{ ...imported('i1', 'old'), guid: 'g1' }]));
+    const refreshed = reduce(base, importAction([], [{ ...imported('i1', 'new'), guid: 'g1' }]));
+    expect(fronts(refreshed)).toEqual(['new']);
+
+    const undone = reduce(refreshed, { type: 'undo', now: NOW });
+    expect(fronts(undone)).toEqual(['old']);
+    // Restored in place, not appended.
+    expect(undone.data.cards).toHaveLength(1);
+  });
+
+  it('does nothing for an import that changed nothing', () => {
+    const state = withCards('a');
+    expect(reduce(state, importAction([]))).toBe(state);
+    expect(selectCanUndo(reduce(state, importAction([])))).toBe(false);
   });
 });

@@ -124,11 +124,41 @@ Themes use Ink colour **names**, not hex, so your terminal's own colour scheme s
 ## CLI
 
 ```bash
-anki              # interactive
-anki --study      # jump straight into due cards
+anki                      # interactive
+anki --study              # jump straight into due cards
+anki import deck.csv      # import an Anki text export
+anki export deck.csv      # export your cards for Anki
 anki --version
 anki --help
 ```
+
+### Import and export
+
+The file format is **Anki's own tab-separated text export**, so one file works in both
+applications — export here and import in Anki desktop, or the reverse, with no converter.
+
+```bash
+anki import deck.csv --dry-run          # report what would happen, write nothing
+anki import deck.csv --tag spanish      # tag everything it brings in
+anki import deck.csv --front 2 --back 3 # when the columns are not 1 and 2
+```
+
+Import reads the `#separator`, `#html`, `#tags column` and `#guid column` headers Anki writes,
+converts HTML fields to plain text, and prints the first few cards so a wrong column mapping is
+obvious _before_ three thousand of them land in your collection. `--dry-run` runs exactly the
+same code and writes nothing.
+
+Re-importing the same deck does not duplicate it. A deck carrying Anki's note GUIDs is matched
+on those, so an updated deck refreshes the text of cards you are already studying **while
+keeping their scheduling**. Without GUIDs, cards are matched on their question text and left
+alone. An import is a single undo step, however many cards it brought in.
+
+Notes it cannot represent are counted and reported rather than silently mangled: **cloze
+deletions** (`{{c1::…}}`) are skipped, **reverse cards** are not generated (the forward card
+still imports), and **audio** references are dropped.
+
+> **`.apkg` files are not supported yet.** That is next. For now, open the deck in Anki and use
+> _File → Export → Notes in Plain Text_.
 
 `--help` and `--version` never load Ink or React — they return in about **50ms**, and a test
 walks the static import graph to keep it that way. The interactive launch reaches its first

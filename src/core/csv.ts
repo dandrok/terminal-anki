@@ -1,0 +1,394 @@
+/**
+ * Anki's text import/export format.
+ *
+ * Deliberately Anki's format rather than one of our own, so a single file works
+ * in both applications: export here and import in Anki desktop, or the reverse,
+ * with no converter in between.
+ *
+ * The format is delimited columns with an optional `#key:value` header block:
+ *
+ * ```
+ * #separator:tab
+ * #html:false
+ * #tags column:3
+ * What is the capital of France?	Paris	geography europe
+ * ```
+ */
+
+/** Separator names Anki writes in a `#separator:` header. */
+const SEPARATOR_NAMES: Record<string, string> = {
+  tab: '\t',
+  comma: ',',
+  semicolon: ';',
+  space: ' ',
+  pipe: '|',
+  colon: ':'
+};
+
+/** Tab first: it is Anki's own default and needs no quoting for prose. */
+export const DEFAULT_SEPARATOR = '\t';
+
+export interface AnkiTextHeaders {
+  separator: string;
+  /** Whether fields should be treated as HTML rather than literal text. */
+  html: boolean;
+  /** 1-based column holding tags, when the file declares one. */
+  tagsColumn?: number;
+  /** 1-based column holding the note GUID, when the file declares one. */
+  guidColumn?: number;
+  /** Tags applied to every row in the file. */
+  tags: string[];
+  deck?: string;
+  notetype?: string;
+}
+
+export interface AnkiTextRow {
+  fields: string[];
+  /** Line number in the source file, for error messages. */
+  line: number;
+}
+
+export interface AnkiTextFile {
+  headers: AnkiTextHeaders;
+  rows: AnkiTextRow[];
+}
+
+/**
+ * Resolve a `#separator:` value.
+ *
+ * Anki accepts both names (`Tab`) and literal characters (`\t`, `;`), and is
+ * case-insensitive about the names.
+ */
+export function resolveSeparator(value: string): string {
+  const named = SEPARATOR_NAMES[value.trim().toLowerCase()];
+  if (named) {
+    return named;
+  }
+  if (value === '\\t') {
+    return '\t';
+  }
+  // A literal single character, which is how Anki writes anything unnamed.
+  return value.length === 1 ? value : DEFAULT_SEPARATOR;
+}
+
+/**
+ * Guess the separator from the body when the file does not declare one.
+ *
+ * Counts candidates on the first few rows and takes the one that appears the
+ * same number of times on every row — a separator produces a consistent column
+ * count, while a character that merely occurs in the prose does not.
+ */
+export function detectSeparator(lines: readonly string[]): string {
+  const sample = lines.filter(line => line.trim() && !line.startsWith('#')).slice(0, 20);
+  if (sample.length === 0) {
+    return DEFAULT_SEPARATOR;
+  }
+
+  let best = DEFAULT_SEPARATOR;
+  let bestColumns = 0;
+
+  for (const candidate of ['\t', ';', ',', '|']) {
+    const counts = sample.map(line => line.split(candidate).length);
+    const first = counts[0];
+    if (first > 1 && counts.every(count => count === first) && first > bestColumns) {
+      best = candidate;
+      bestColumns = first;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Split one delimited line, honouring RFC 4180 quoting.
+ *
+ * Returns `null` when the line ends inside an open quote, which means the field
+ * continues onto the next line and the caller must keep reading.
+ */
+function splitRow(line: string, separator: string, carry: string[] = []): string[] | null {
+  const fields = [...carry];
+  let field = carry.length > 0 ? (fields.pop() ?? '') : '';
+  let quoted = carry.length > 0;
+  let index = 0;
+
+  while (index < line.length) {
+    const character = line[index];
+
+    if (quoted) {
+      if (character === '"') {
+        // A doubled quote inside a quoted field is one literal quote.
+        if (line[index + 1] === '"') {
+          field += '"';
+          index += 2;
+          continue;
+        }
+        quoted = false;
+        index++;
+        continue;
+      }
+      field += character;
+      index++;
+      continue;
+    }
+
+    if (character === '"' && field.length === 0) {
+      quoted = true;
+      index++;
+      continue;
+    }
+    if (line.startsWith(separator, index)) {
+      fields.push(field);
+      field = '';
+      index += separator.length;
+      continue;
+    }
+
+    field += character;
+    index++;
+  }
+
+  fields.push(field);
+  return quoted ? null : fields;
+}
+
+/** Parse the `#key: value` header block and the delimited body. */
+export function parseAnkiText(source: string): AnkiTextFile {
+  // Strip a UTF-8 BOM: a spreadsheet export starts with one, and it would
+  // otherwise become part of the first header key.
+  const lines = source.replace(/^\uFEFF/, '').split(/\r\n?|\n/);
+
+  const headers: AnkiTextHeaders = {
+    separator: '',
+    html: false,
+    tags: []
+  };
+
+  let index = 0;
+  for (; index < lines.length; index++) {
+    const line = lines[index];
+    if (!line.startsWith('#')) {
+      break;
+    }
+    const at = line.indexOf(':');
+    if (at < 0) {
+      continue;
+    }
+    const key = line.slice(1, at).trim().toLowerCase();
+    const value = line.slice(at + 1).trim();
+
+    switch (key) {
+      case 'separator':
+        headers.separator = resolveSeparator(value);
+        break;
+      case 'html':
+        headers.html = value.toLowerCase() === 'true';
+        break;
+      case 'tags':
+        headers.tags = value.split(/\s+/).filter(Boolean);
+        break;
+      case 'deck':
+        headers.deck = value;
+        break;
+      case 'notetype':
+        headers.notetype = value;
+        break;
+      case 'tags column':
+        headers.tagsColumn = Number.parseInt(value, 10) || undefined;
+        break;
+      case 'guid column':
+        headers.guidColumn = Number.parseInt(value, 10) || undefined;
+        break;
+      default:
+        // Unknown headers are ignored rather than rejected: Anki adds new ones
+        // over time and a file we cannot fully describe is still importable.
+        break;
+    }
+  }
+
+  const body = lines.slice(index);
+  const separator = headers.separator || detectSeparator(body);
+  headers.separator = separator;
+
+  const rows: AnkiTextRow[] = [];
+  let carry: string[] | null = null;
+  let carryLine = 0;
+
+  for (let offset = 0; offset < body.length; offset++) {
+    const line = body[offset];
+    // Blank lines are spacing, but a line made only of separators is a real row
+    // whose fields happen to be empty. Trimming alone dropped it, which lost a
+    // row without saying so — the import layer should decide it is empty and
+    // report it, not the parser.
+    if (carry === null && line.trim() === '' && !line.includes(separator)) {
+      continue;
+    }
+
+    if (carry === null) {
+      carryLine = index + offset + 1;
+      const parsed = splitRow(line, separator);
+      if (parsed === null) {
+        // Field left open: it contains a newline and continues below.
+        carry = openFields(line, separator);
+        continue;
+      }
+      rows.push({ fields: parsed, line: carryLine });
+      continue;
+    }
+
+    const continued = continueRow(carry, line, separator);
+    if (continued.done) {
+      rows.push({ fields: continued.fields, line: carryLine });
+      carry = null;
+    } else {
+      carry = continued.fields;
+    }
+  }
+
+  // A field left open at end of file is still worth keeping; dropping the row
+  // would silently lose a card because of one unbalanced quote.
+  if (carry !== null) {
+    rows.push({ fields: carry, line: carryLine });
+  }
+
+  return { headers, rows };
+}
+
+/** Fields so far for a row whose last field is still open. */
+function openFields(line: string, separator: string): string[] {
+  const fields: string[] = [];
+  let field = '';
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index++) {
+    const character = line[index];
+    if (quoted) {
+      if (character === '"' && line[index + 1] === '"') {
+        field += '"';
+        index++;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+    if (character === '"' && field.length === 0) {
+      quoted = true;
+      continue;
+    }
+    if (line.startsWith(separator, index)) {
+      fields.push(field);
+      field = '';
+      index += separator.length - 1;
+      continue;
+    }
+    field += character;
+  }
+
+  fields.push(`${field}\n`);
+  return fields;
+}
+
+/** Append a continuation line to a row whose last field is still open. */
+function continueRow(
+  carry: readonly string[],
+  line: string,
+  separator: string
+): { fields: string[]; done: boolean } {
+  const fields = [...carry];
+  let field = fields.pop() ?? '';
+  let quoted = true;
+  let index = 0;
+
+  for (; index < line.length; index++) {
+    const character = line[index];
+    if (quoted) {
+      if (character === '"' && line[index + 1] === '"') {
+        field += '"';
+        index++;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+    if (line.startsWith(separator, index)) {
+      fields.push(field);
+      field = '';
+      index += separator.length - 1;
+      continue;
+    }
+    field += character;
+  }
+
+  if (quoted) {
+    fields.push(`${field}\n`);
+    return { fields, done: false };
+  }
+  fields.push(field);
+  return { fields, done: true };
+}
+
+/** Quote a field only when the separator, a quote or a newline forces it. */
+export function quoteField(value: string, separator: string): string {
+  const needsQuotes =
+    value.includes(separator) ||
+    value.includes('"') ||
+    value.includes('\n') ||
+    value.includes('\r');
+  return needsQuotes ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+export interface FormatOptions {
+  separator?: string;
+  /** Emitted as a `#deck:` header so Anki files the notes somewhere sensible. */
+  deck?: string;
+}
+
+export interface ExportRow {
+  front: string;
+  back: string;
+  tags: readonly string[];
+  guid?: string;
+}
+
+/**
+ * Write rows in Anki's text format.
+ *
+ * The header block is always written. Anki can auto-detect a separator, but
+ * declaring it removes the guesswork — and `#html:false` matters: without it a
+ * card whose text contains a `<` can be silently reinterpreted as markup.
+ */
+export function formatAnkiText(rows: readonly ExportRow[], options: FormatOptions = {}): string {
+  const separator = options.separator ?? DEFAULT_SEPARATOR;
+  const separatorName =
+    Object.entries(SEPARATOR_NAMES).find(([, value]) => value === separator)?.[0] ?? separator;
+
+  // The guid column only earns its place when something is in it. A deck of
+  // hand-typed cards exports as three plain columns rather than leading every
+  // single line with an empty one.
+  const withGuids = rows.some(row => row.guid);
+
+  const lines = [`#separator:${separatorName}`, '#html:false'];
+  if (withGuids) {
+    lines.push('#guid column:1');
+  }
+  lines.push(`#tags column:${withGuids ? 4 : 3}`);
+  if (options.deck) {
+    lines.push(`#deck:${options.deck}`);
+  }
+
+  for (const row of rows) {
+    const fields = withGuids ? [quoteField(row.guid ?? '', separator)] : [];
+    fields.push(
+      quoteField(row.front, separator),
+      quoteField(row.back, separator),
+      // Anki separates tags with spaces, so a tag cannot contain one.
+      quoteField(row.tags.join(' '), separator)
+    );
+    lines.push(fields.join(separator));
+  }
+
+  return `${lines.join('\n')}\n`;
+}

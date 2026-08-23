@@ -74,6 +74,7 @@ export function normalizeCard(raw: unknown, seenIds: Set<string>): Flashcard | n
   seenIds.add(id);
 
   const createdAt = toDate(raw.createdAt, new Date());
+  const mediaNames = toArray(raw.media).filter((name): name is string => typeof name === 'string');
 
   return {
     id,
@@ -85,7 +86,12 @@ export function normalizeCard(raw: unknown, seenIds: Set<string>): Flashcard | n
     repetitions: Math.max(0, Math.floor(toFiniteNumber(raw.repetitions, 0))),
     nextReview: toDate(raw.nextReview, createdAt),
     lastReview: toOptionalDate(raw.lastReview) ?? null,
-    createdAt
+    createdAt,
+    // Optional and only present on imported cards. This function builds its
+    // result field by field, so anything not named here is dropped on the next
+    // load — which would quietly turn every re-import into a duplicate.
+    ...(toText(raw.guid) ? { guid: toText(raw.guid) } : {}),
+    ...(mediaNames.length > 0 ? { media: mediaNames } : {})
   };
 }
 
