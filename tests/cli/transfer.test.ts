@@ -89,6 +89,28 @@ describe('runImport', () => {
     expect(second.lines.join('\n')).toContain('1 updated');
   });
 
+  it('does not add a deck again when the second copy carries guids', () => {
+    // The realistic path: import an Anki text export, then import the same
+    // deck as a package. Only the package has guids.
+    const plain = write('plain.csv', DECK);
+    run(['import', plain]);
+    const before = storedCards().length;
+
+    const withGuids = write(
+      'guids.csv',
+      [
+        '#separator:tab',
+        '#guid column:1',
+        '#tags column:4',
+        'g1\tWhat is the capital of France?\tParis\tgeography',
+        'g2\tWhat is 2 + 2?\t4\tmaths'
+      ].join('\n')
+    );
+    run(['import', withGuids]);
+
+    expect(storedCards()).toHaveLength(before);
+  });
+
   it('does not duplicate a deck without guids either', () => {
     const file = write('deck.csv', DECK);
     run(['import', file]);
@@ -213,6 +235,22 @@ describe('runExport', () => {
     const collection = path.join(workspace, 'data', 'flashcards.json');
     const result = run(['export', collection]);
 
+    expect(result.code).toBe(1);
+    expect(result.lines.join('\n')).toContain('Refusing to overwrite');
+    expect(JSON.parse(fs.readFileSync(collection, 'utf-8')).cards).toHaveLength(2);
+  });
+
+  it('refuses a symlink pointing at the collection', () => {
+    // Comparing the resolved strings alone let this through, and the file it
+    // pointed at was the only copy of the deck.
+    write('in.csv', DECK);
+    run(['import', path.join(workspace, 'in.csv')]);
+
+    const collection = path.join(workspace, 'data', 'flashcards.json');
+    const decoy = path.join(workspace, 'looks-innocent.csv');
+    fs.symlinkSync(collection, decoy);
+
+    const result = run(['export', decoy]);
     expect(result.code).toBe(1);
     expect(result.lines.join('\n')).toContain('Refusing to overwrite');
     expect(JSON.parse(fs.readFileSync(collection, 'utf-8')).cards).toHaveLength(2);

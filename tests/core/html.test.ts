@@ -145,8 +145,32 @@ describe('htmlToText media', () => {
     expect(htmlToText(html).images).toEqual([expected]);
   });
 
-  it('decodes an entity-escaped filename', () => {
-    expect(htmlToText('<img src="a&amp;b.png">').images).toEqual(['a&b.png']);
+  it('decodes an entity-escaped filename before looking it up', () => {
+    const seen: string[] = [];
+    htmlToText('<img src="a&amp;b.png">', {
+      resolveMedia: name => {
+        seen.push(name);
+        return 'stored.png';
+      }
+    });
+    expect(seen).toEqual(['a&b.png']);
+  });
+
+  it('drops a filename the marker parser would refuse', () => {
+    // Producer and parser share one rule. When they disagreed, a marker was
+    // written for "my photo.png" and then silently dropped when read back —
+    // the picture vanished and nothing listed it.
+    for (const name of ['my photo.png', 'a&b.png', 'sub/dir.png']) {
+      const result = htmlToText(`<img src="${name}">`);
+      expect(result.images).toEqual([]);
+      expect(result.text).toBe('');
+    }
+  });
+
+  it('keeps a name once it has been resolved to a stored one', () => {
+    // Which is what the package importer does: every file is renamed to a hash.
+    const result = htmlToText('<img src="my photo.png">', { resolveMedia: () => 'ab12cd34.png' });
+    expect(result.images).toEqual(['ab12cd34.png']);
   });
 
   it('does not mistake data-src for src', () => {

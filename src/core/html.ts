@@ -1,4 +1,4 @@
-import { imageMarker } from './media.js';
+import { imageMarker, isStorableMediaName } from './media.js';
 
 /**
  * Turn an Anki field into plain text.
@@ -43,6 +43,11 @@ const BLOCK_TAGS = new Set([
   'ul',
   'ol',
   'tr',
+  'td',
+  'th',
+  'dl',
+  'dt',
+  'dd',
   'table',
   'h1',
   'h2',
@@ -357,7 +362,9 @@ export function htmlToText(input: string, options: HtmlToTextOptions = {}): Html
         }
         const decoded = decodeEntities(source);
         const resolved = options.resolveMedia ? options.resolveMedia(decoded) : decoded;
-        if (!resolved) {
+        // A name the parser would refuse is dropped here instead, so the
+        // reported images and the markers in the text always agree.
+        if (!resolved || !isStorableMediaName(resolved)) {
           return '';
         }
         images.push(resolved);

@@ -99,16 +99,31 @@ export function detectSeparator(lines: readonly string[]): string {
   return best;
 }
 
+/** A row part-read: the fields completed so far, plus the one still open. */
+interface OpenRow {
+  fields: string[];
+  field: string;
+}
+
 /**
- * Split one delimited line, honouring RFC 4180 quoting.
+ * Scan one line, honouring RFC 4180 quoting.
  *
- * Returns `null` when the line ends inside an open quote, which means the field
- * continues onto the next line and the caller must keep reading.
+ * Continues an open quoted field when `carry` is given, which is how a field
+ * containing a newline is read: it spans lines, and the row is not finished
+ * until the quote closes.
+ *
+ * One scanner rather than three. Splitting a fresh line, opening a field and
+ * continuing one are the same walk from a different starting state, and three
+ * copies meant three chances for the quoting rules to drift apart.
  */
-function splitRow(line: string, separator: string, carry: string[] = []): string[] | null {
-  const fields = [...carry];
-  let field = carry.length > 0 ? (fields.pop() ?? '') : '';
-  let quoted = carry.length > 0;
+function scanRow(
+  line: string,
+  separator: string,
+  carry?: OpenRow
+): { fields: string[]; field: string; open: boolean } {
+  const fields = carry ? [...carry.fields] : [];
+  let field = carry ? carry.field : '';
+  let quoted = carry !== undefined;
   let index = 0;
 
   while (index < line.length) {
@@ -131,6 +146,7 @@ function splitRow(line: string, separator: string, carry: string[] = []): string
       continue;
     }
 
+    // A quote only opens a field at its start; elsewhere it is just a quote.
     if (character === '"' && field.length === 0) {
       quoted = true;
       index++;
@@ -147,8 +163,12 @@ function splitRow(line: string, separator: string, carry: string[] = []): string
     index++;
   }
 
+  if (quoted) {
+    // The newline this line ended on is part of the field.
+    return { fields, field: `${field}\n`, open: true };
+  }
   fields.push(field);
-  return quoted ? null : fields;
+  return { fields, field: '', open: false };
 }
 
 /** Parse the `#key: value` header block and the delimited body. */
@@ -210,7 +230,7 @@ export function parseAnkiText(source: string): AnkiTextFile {
   headers.separator = separator;
 
   const rows: AnkiTextRow[] = [];
-  let carry: string[] | null = null;
+  let carry: OpenRow | undefined;
   let carryLine = 0;
 
   for (let offset = 0; offset < body.length; offset++) {
@@ -219,115 +239,29 @@ export function parseAnkiText(source: string): AnkiTextFile {
     // whose fields happen to be empty. Trimming alone dropped it, which lost a
     // row without saying so — the import layer should decide it is empty and
     // report it, not the parser.
-    if (carry === null && line.trim() === '' && !line.includes(separator)) {
+    if (!carry && line.trim() === '' && !line.includes(separator)) {
       continue;
     }
-
-    if (carry === null) {
+    if (!carry) {
       carryLine = index + offset + 1;
-      const parsed = splitRow(line, separator);
-      if (parsed === null) {
-        // Field left open: it contains a newline and continues below.
-        carry = openFields(line, separator);
-        continue;
-      }
-      rows.push({ fields: parsed, line: carryLine });
-      continue;
     }
 
-    const continued = continueRow(carry, line, separator);
-    if (continued.done) {
-      rows.push({ fields: continued.fields, line: carryLine });
-      carry = null;
-    } else {
-      carry = continued.fields;
+    const scanned = scanRow(line, separator, carry);
+    if (scanned.open) {
+      carry = { fields: scanned.fields, field: scanned.field };
+      continue;
     }
+    rows.push({ fields: scanned.fields, line: carryLine });
+    carry = undefined;
   }
 
   // A field left open at end of file is still worth keeping; dropping the row
   // would silently lose a card because of one unbalanced quote.
-  if (carry !== null) {
-    rows.push({ fields: carry, line: carryLine });
+  if (carry) {
+    rows.push({ fields: [...carry.fields, carry.field], line: carryLine });
   }
 
   return { headers, rows };
-}
-
-/** Fields so far for a row whose last field is still open. */
-function openFields(line: string, separator: string): string[] {
-  const fields: string[] = [];
-  let field = '';
-  let quoted = false;
-
-  for (let index = 0; index < line.length; index++) {
-    const character = line[index];
-    if (quoted) {
-      if (character === '"' && line[index + 1] === '"') {
-        field += '"';
-        index++;
-      } else if (character === '"') {
-        quoted = false;
-      } else {
-        field += character;
-      }
-      continue;
-    }
-    if (character === '"' && field.length === 0) {
-      quoted = true;
-      continue;
-    }
-    if (line.startsWith(separator, index)) {
-      fields.push(field);
-      field = '';
-      index += separator.length - 1;
-      continue;
-    }
-    field += character;
-  }
-
-  fields.push(`${field}\n`);
-  return fields;
-}
-
-/** Append a continuation line to a row whose last field is still open. */
-function continueRow(
-  carry: readonly string[],
-  line: string,
-  separator: string
-): { fields: string[]; done: boolean } {
-  const fields = [...carry];
-  let field = fields.pop() ?? '';
-  let quoted = true;
-  let index = 0;
-
-  for (; index < line.length; index++) {
-    const character = line[index];
-    if (quoted) {
-      if (character === '"' && line[index + 1] === '"') {
-        field += '"';
-        index++;
-      } else if (character === '"') {
-        quoted = false;
-      } else {
-        field += character;
-      }
-      continue;
-    }
-    if (line.startsWith(separator, index)) {
-      fields.push(field);
-      field = '';
-      index += separator.length - 1;
-      continue;
-    }
-    field += character;
-  }
-
-  if (quoted) {
-    fields.push(`${field}\n`);
-    return { fields, done: false };
-  }
-  fields.push(field);
-  return { fields, done: true };
 }
 
 /** Quote a field only when the separator, a quote or a newline forces it. */

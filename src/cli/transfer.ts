@@ -79,6 +79,34 @@ function commitPlan(
   }
 }
 
+/** macOS and Windows treat these as the same file; Linux does not. */
+const CASE_INSENSITIVE_PATHS = process.platform === 'darwin' || process.platform === 'win32';
+
+function isSamePath(a: string, b: string): boolean {
+  return CASE_INSENSITIVE_PATHS ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+/**
+ * Resolve a path as far as the filesystem allows.
+ *
+ * Comparing the strings alone let a symlink slip past the guard below, and the
+ * file it pointed at was the collection. The target itself may not exist yet,
+ * so the deepest existing ancestor is resolved and the rest joined on.
+ */
+function canonical(target: string): string {
+  const resolved = path.resolve(target);
+  try {
+    return fs.realpathSync(resolved);
+  } catch {
+    // Not there yet, which is the normal case for an export.
+  }
+  try {
+    return path.join(fs.realpathSync(path.dirname(resolved)), path.basename(resolved));
+  } catch {
+    return resolved;
+  }
+}
+
 /** The cards already in the collection, for duplicate detection. */
 function existingCards(): Flashcard[] {
   const store = createStore({ seedSampleCards: false });
@@ -223,11 +251,11 @@ export function runExport(args: ParsedArgs): TransferResult {
     return fail('Nowhere to export to. Try: anki export deck.csv');
   }
 
-  const target = path.resolve(file);
+  const target = canonical(file);
   // The one mistake worth guarding: `anki export flashcards.json` would write
   // a text file over the collection it was exporting.
   for (const protectedPath of [resolveDataFile(), resolveConfigFile()]) {
-    if (target === path.resolve(protectedPath)) {
+    if (isSamePath(target, canonical(protectedPath))) {
       return fail(`Refusing to overwrite your collection at ${protectedPath}.`);
     }
   }

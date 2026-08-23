@@ -193,10 +193,15 @@ export function planImport(
       media.add(file);
     }
 
-    const match = note.guid ? byGuid.get(note.guid) : byFront.get(key);
+    // A guid match first, then the text. A note carrying a guid that nothing
+    // matches can still be a card already here under a different origin —
+    // importing a deck as a text file and later as a package would otherwise
+    // add the whole thing a second time.
+    const byGuidMatch = note.guid ? byGuid.get(note.guid) : undefined;
+    const match = byGuidMatch ?? byFront.get(key);
 
     if (match) {
-      if (!note.guid) {
+      if (!byGuidMatch) {
         // Matched only on text: treat it as already present rather than
         // overwriting a card the learner may have edited themselves.
         report.duplicates++;
@@ -204,14 +209,16 @@ export function planImport(
       }
       // Content is replaced; scheduling is not. Re-importing an updated deck
       // must not throw away the progress made on the card so far.
-      updated.push({
-        ...match,
-        front,
-        back,
-        tags,
-        ...(files.length > 0 ? { media: files } : {}),
-        guid: note.guid
-      });
+      // `media` is assigned unconditionally. Spreading it only when non-empty
+      // left a refreshed card holding the file list from before, pointing at a
+      // picture its text no longer mentions.
+      const refreshed: Flashcard = { ...match, front, back, tags, guid: note.guid };
+      if (files.length > 0) {
+        refreshed.media = files;
+      } else {
+        delete refreshed.media;
+      }
+      updated.push(refreshed);
       report.updated++;
       if (report.sample.length < SAMPLE_SIZE) {
         // Updates get sampled as well, or a re-import that only refreshes

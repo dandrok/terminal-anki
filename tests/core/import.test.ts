@@ -154,6 +154,26 @@ describe('planImport duplicates', () => {
     });
   });
 
+  it('clears media a refreshed card no longer references', () => {
+    // Spreading media only when non-empty left the card holding a file list
+    // from before, pointing at a picture its text no longer mentions.
+    const existing = [card({ guid: 'g1', media: ['old.png'] })];
+    const plan = planImport([note({ guid: 'g1', fields: ['No image now', 'Back'] })], existing, {
+      now: NOW
+    });
+    expect(plan.updated[0].media).toBeUndefined();
+  });
+
+  it('replaces media a refreshed card does reference', () => {
+    const existing = [card({ guid: 'g1', media: ['old.png'] })];
+    const plan = planImport(
+      [note({ guid: 'g1', fields: ['<img src="new.png">', 'Back'] })],
+      existing,
+      { now: NOW }
+    );
+    expect(plan.updated[0].media).toEqual(['new.png']);
+  });
+
   it('treats a text match without a guid as already present', () => {
     // Overwriting would discard an edit the learner made themselves.
     const existing = [card({ front: 'Front', back: 'My own better answer' })];
@@ -172,6 +192,30 @@ describe('planImport duplicates', () => {
     const existing = [card({ front: 'Front' })];
     const plan = planImport([note({ fields: [front, 'Back'] })], existing, { now: NOW });
     expect(plan.report.duplicates).toBe(shouldMatch ? 1 : 0);
+  });
+
+  it('recognises a card imported earlier without a guid', () => {
+    // Importing a deck as a text file and later as a package: the package has
+    // guids and the existing cards do not, so a guid-only match added the whole
+    // deck a second time.
+    const fromText = [card({ front: 'Bonjour', back: 'Hello' })];
+    const plan = planImport(
+      [note({ guid: 'g-from-package', fields: ['Bonjour', 'Hello'] })],
+      fromText,
+      { now: NOW }
+    );
+
+    expect(plan.added).toHaveLength(0);
+    expect(plan.report.duplicates).toBe(1);
+  });
+
+  it('still prefers a guid match over a text match', () => {
+    const existing = [
+      card({ id: 'by-guid', guid: 'g1', front: 'Different text' }),
+      card({ id: 'by-text', front: 'Front' })
+    ];
+    const plan = planImport([note({ guid: 'g1' })], existing, { now: NOW });
+    expect(plan.updated[0].id).toBe('by-guid');
   });
 
   it('does not import the same note twice from one file', () => {

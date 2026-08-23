@@ -19,6 +19,18 @@ const MARKER = new RegExp(`${OPEN}img:([^${CLOSE}]+)${CLOSE}`, 'g');
 /** Filenames are stored hashed, so this only has to survive a round trip. */
 const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
 
+/**
+ * Whether a filename can be carried in a marker.
+ *
+ * Exported so whatever *writes* a marker uses the same rule that reads one.
+ * When they disagreed, `htmlToText` happily emitted a marker for "my photo.png"
+ * and the parser then dropped it — the picture disappeared with nothing said
+ * and nothing listed in the card's media.
+ */
+export function isStorableMediaName(name: string): boolean {
+  return SAFE_NAME.test(name);
+}
+
 export interface TextSegment {
   kind: 'text';
   value: string;
@@ -59,7 +71,7 @@ export function parseSegments(text: string): CardSegment[] {
     }
     // A name that could climb out of the media directory is dropped whole,
     // rather than kept as an image or handed back as text.
-    if (SAFE_NAME.test(match[1])) {
+    if (isStorableMediaName(match[1])) {
       segments.push({ kind: 'image', file: match[1] });
     }
     index = at + match[0].length;
