@@ -50,6 +50,15 @@ describe('decodeEntities', () => {
     expect(decodeEntities('a&nbsp;b').charCodeAt(1)).toBe(32);
   });
 
+  it.each(['&constructor;', '&toString;', '&valueOf;', '&hasOwnProperty;', '&__proto__;'])(
+    'does not resolve %j through the prototype',
+    input => {
+      // A plain object inherits from Object.prototype, so "&constructor;" came
+      // out as "function Object() { [native code] }" in the middle of a card.
+      expect(decodeEntities(input)).toBe(input);
+    }
+  );
+
   it('leaves an unknown entity exactly as written', () => {
     // Mangling it into a replacement character loses information the reader
     // could otherwise still make sense of.

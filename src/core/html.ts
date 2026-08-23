@@ -277,7 +277,10 @@ export function decodeEntities(input: string): string {
       // inside the key used to recognise a card on re-import.
       return code === 0x00ad ? '' : String.fromCodePoint(code);
     }
-    return ENTITIES[body] ?? whole;
+    // Own properties only. A plain object inherits from Object.prototype, so
+    // "&constructor;" resolved to a function and stringified into the card as
+    // "function Object() { [native code] }".
+    return Object.hasOwn(ENTITIES, body) ? ENTITIES[body] : whole;
   });
 }
 

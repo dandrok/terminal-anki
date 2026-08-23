@@ -111,6 +111,18 @@ describe('createMediaStore', () => {
     expect(store().has(name)).toBe(false);
   });
 
+  it.each(['my-image.png', 'photo_1.jpg', 'a.b.png'])(
+    'resolves %j, which the marker writer accepts',
+    name => {
+      // A stricter rule here than in the marker meant a picture with a hyphen
+      // in its name got a marker and then silently never appeared.
+      const media = store();
+      fs.mkdirSync(media.directory, { recursive: true });
+      fs.writeFileSync(path.join(media.directory, name), PNG);
+      expect(media.resolve(name)).toBeDefined();
+    }
+  );
+
   it('reports a name that is simply not there', () => {
     expect(store().resolve('deadbeef.png')).toBeUndefined();
   });

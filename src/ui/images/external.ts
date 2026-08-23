@@ -86,9 +86,8 @@ export function renderExternal({
       renderer.command,
       [
         `--size=${width}x${height}`,
-        // Keep the whole picture inside the box rather than cropping it, and
-        // leave no trailing background: the frame around it is Ink's.
-        '--clear',
+        // No `--clear`: it clears the *screen* before drawing, which would take
+        // the interface the picture is supposed to sit inside with it.
         '--animate=off',
         '--polite=on',
         file

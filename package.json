@@ -1,6 +1,6 @@
 {
   "name": "terminal-anki",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "description": "Flashcards with spaced repetition in your terminal. SM-2 scheduling, two-keystroke grading, activity heatmap and undo, built on Ink and React.",
   "main": "./dist/index.js",

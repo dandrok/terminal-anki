@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.0
 
 ### Images on cards
 
@@ -61,6 +61,13 @@ obvious before thousands of them land in your collection.
 - Cloze notes, reverse cards and audio are counted and reported rather than silently mangled.
 
 ### Also fixed
+
+- **Exporting and re-importing your own deck destroyed its pictures.** The
+  readable `[image: x.png]` came back as literal text, and because the note guid
+  still matched it *overwrote* the good card rather than being spotted as a
+  duplicate. A deck with pictures now exports as HTML with `<img>` tags, which
+  survive the trip in both directions; a deck without them stays plain text,
+  where a card containing a `<` is safe.
 
 - **Accented characters imported as raw entities.** `caf&eacute;` and `ni&ntilde;o` came
   through literally, which affected every French, Spanish and German deck — the most shared

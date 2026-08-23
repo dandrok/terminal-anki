@@ -132,3 +132,37 @@ export function stripMedia(text: string): string {
     .join('')
     .trim();
 }
+
+/** Escape the characters that would otherwise be read back as markup. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * The field as HTML, with its pictures as `<img>` tags.
+ *
+ * Used when exporting a deck that has media. `describeMedia` produces something
+ * readable but not reversible: re-importing a file it wrote turned the picture
+ * into the literal text "[image: x.png]" and, because the note guid still
+ * matched, overwrote the good card with the degraded one.
+ *
+ * `<img src="…">` survives the trip in both directions — our own importer
+ * converts it back to a marker, and Anki understands it natively.
+ */
+export function mediaToHtml(text: string): string {
+  return parseSegments(text)
+    .map(segment =>
+      segment.kind === 'text'
+        ? escapeHtml(segment.value)
+        : // Single-quoted, because a delimited text file doubles every double
+          // quote inside a field — every picture would otherwise be written
+          // `<img src=""x.png"">`. Stored names are hex and an extension, so
+          // they cannot contain a quote of either kind.
+          `<img src='${segment.file}'>`
+    )
+    .join('');
+}

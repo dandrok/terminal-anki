@@ -302,6 +302,14 @@ export interface FormatOptions {
   separator?: string;
   /** Emitted as a `#deck:` header so Anki files the notes somewhere sensible. */
   deck?: string;
+  /**
+   * Whether the fields are HTML.
+   *
+   * Only turned on for a deck that has pictures, where `<img>` is the one form
+   * that survives a round trip. A deck of plain text stays plain, because
+   * `#html:true` means a card containing a `<` is read back as markup.
+   */
+  html?: boolean;
 }
 
 export interface ExportRow {
@@ -315,8 +323,9 @@ export interface ExportRow {
  * Write rows in Anki's text format.
  *
  * The header block is always written. Anki can auto-detect a separator, but
- * declaring it removes the guesswork — and `#html:false` matters: without it a
- * card whose text contains a `<` can be silently reinterpreted as markup.
+ * declaring it removes the guesswork — and the `#html:` line matters either
+ * way: without it a card whose text contains a `<` can be silently
+ * reinterpreted as markup, and with it turned off an `<img>` would be.
  */
 export function formatAnkiText(rows: readonly ExportRow[], options: FormatOptions = {}): string {
   const separator = options.separator ?? DEFAULT_SEPARATOR;
@@ -328,7 +337,7 @@ export function formatAnkiText(rows: readonly ExportRow[], options: FormatOption
   // single line with an empty one.
   const withGuids = rows.some(row => row.guid);
 
-  const lines = [`#separator:${separatorName}`, '#html:false'];
+  const lines = [`#separator:${separatorName}`, `#html:${options.html ? 'true' : 'false'}`];
   if (withGuids) {
     lines.push('#guid column:1');
   }

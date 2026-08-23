@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { resolveDataDir } from './paths.js';
+import { isStorableMediaName } from '../core/media.js';
 
 /**
  * Where imported images live.
@@ -89,9 +90,11 @@ export function createMediaStore(options: MediaStoreOptions = {}): MediaStore {
   };
 
   const resolve = (storedName: string): string | undefined => {
-    // The name comes out of card text, which came from a deck. Anything with a
-    // separator in it must not be joined onto the media directory.
-    if (!/^[A-Za-z0-9]+\.[A-Za-z0-9]+$/.test(storedName)) {
+    // The same rule the marker writer uses. A stricter one here meant a name
+    // like "my-image.png" was accepted into a marker and then refused on the
+    // way back, so the picture silently never appeared. The rule excludes path
+    // separators and the dot components, so joining it on is safe.
+    if (!isStorableMediaName(storedName)) {
       return undefined;
     }
     const target = path.join(directory, storedName);

@@ -214,6 +214,17 @@ describe('runExport', () => {
     expect(after).toHaveLength(before.length);
   });
 
+  it('keeps a deck without pictures in plain text', () => {
+    // #html:true would make a card containing "<" be read back as markup, so
+    // the HTML form is only used when there is a picture to carry.
+    write('in.csv', DECK);
+    run(['import', path.join(workspace, 'in.csv')]);
+    const target = path.join(workspace, 'plain.csv');
+    run(['export', target]);
+
+    expect(fs.readFileSync(target, 'utf-8')).toContain('#html:false');
+  });
+
   it('writes a file Anki can read', () => {
     write('in.csv', DECK);
     run(['import', path.join(workspace, 'in.csv')]);
@@ -382,14 +393,32 @@ describe('runImport from an Anki package', () => {
     expect(result.lines.join('\n')).toContain('no Anki collection');
   });
 
-  it('exports what it imported', () => {
+  it('survives an export and re-import without losing the picture', () => {
+    // The backup-and-restore path. A readable "[image: x.png]" came back as
+    // literal text, and the matching guid meant it *overwrote* the good card
+    // rather than being spotted as a duplicate.
     run(['import', fixture('legacy.apkg')]);
-    const target = path.join(workspace, 'out.csv');
+    const before = storedCards().find(card => card.media?.length);
+    expect(before).toBeDefined();
+
+    const target = path.join(workspace, 'round-trip.csv');
+    run(['export', target]);
+    run(['import', target]);
+
+    const after = storedCards().find(card => card.id === before!.id);
+    expect(after?.front).toBe(before!.front);
+    expect(after?.media).toEqual(before!.media);
+  });
+
+  it('exports a deck with pictures as HTML, so the img tags survive', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const target = path.join(workspace, 'with-images.csv');
     expect(run(['export', target]).code).toBe(0);
 
     const contents = fs.readFileSync(target, 'utf-8');
     expect(contents).toContain('hola');
-    // An image becomes a readable placeholder outside this application.
-    expect(contents).toContain('[image:');
+    expect(contents).toContain('#html:true');
+    // Single-quoted, so a delimited file does not have to double every quote.
+    expect(contents).toMatch(/<img src='[a-f0-9]+\.png'>/);
   });
 });

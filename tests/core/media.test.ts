@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isStorableMediaName,
+  mediaToHtml,
   describeMedia,
   hasMedia,
   imageMarker,
@@ -115,6 +116,31 @@ describe('describeMedia', () => {
 
   it('leaves text without media untouched', () => {
     expect(describeMedia('plain')).toBe('plain');
+  });
+});
+
+describe('mediaToHtml', () => {
+  it('writes a picture as an img tag', () => {
+    expect(mediaToHtml(`See ${marker('a.png')} here`)).toBe("See <img src='a.png'> here");
+  });
+
+  it('escapes the text around it', () => {
+    // Otherwise the field says it is HTML and a card containing "<" is read
+    // back as markup.
+    expect(mediaToHtml('a < b & c')).toBe('a &lt; b &amp; c');
+  });
+
+  it('uses single quotes, which a delimited file does not have to escape', () => {
+    // With double quotes every picture is written `<img src=""x.png"">`.
+    expect(mediaToHtml(marker('a.png'))).not.toContain('"');
+  });
+
+  it('round-trips back to the same marker', () => {
+    // The property that matters: exporting and re-importing your own deck must
+    // not degrade the card. "[image: x.png]" came back as literal text and,
+    // because the note guid still matched, overwrote the good card with it.
+    const original = `Which chamber? ${marker('ab12cd34.png')}`;
+    expect(mediaToHtml(original)).toBe("Which chamber? <img src='ab12cd34.png'>");
   });
 });
 

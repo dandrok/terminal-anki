@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyImport,
   describeReport,
+  mergeImport,
   planImport,
   type ImportedNote
 } from '../../src/core/import.js';
@@ -259,11 +259,11 @@ describe('planImport scheduling', () => {
   });
 });
 
-describe('applyImport', () => {
+describe('mergeImport', () => {
   it('appends new cards', () => {
     const existing = [card({ id: 'a' })];
     const plan = planImport([note({ fields: ['New', 'Card'] })], existing, { now: NOW });
-    const result = applyImport(existing, plan);
+    const result = mergeImport(existing, plan.added, plan.updated);
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe('a');
   });
@@ -273,7 +273,7 @@ describe('applyImport', () => {
     const plan = planImport([note({ guid: 'g1', fields: ['Changed', 'Back'] })], existing, {
       now: NOW
     });
-    const result = applyImport(existing, plan);
+    const result = mergeImport(existing, plan.added, plan.updated);
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: 'a', front: 'Changed' });
     expect(result[1].id).toBe('b');
@@ -282,7 +282,8 @@ describe('applyImport', () => {
   it('leaves the input untouched', () => {
     const existing = [card({ id: 'a' })];
     const before = JSON.stringify(existing);
-    applyImport(existing, planImport([note({ fields: ['x', 'y'] })], existing, { now: NOW }));
+    const plan = planImport([note({ fields: ['x', 'y'] })], existing, { now: NOW });
+    mergeImport(existing, plan.added, plan.updated);
     expect(JSON.stringify(existing)).toBe(before);
   });
 });

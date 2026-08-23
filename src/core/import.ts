@@ -271,11 +271,6 @@ export function mergeImport(
   return [...existing.map(card => replacements.get(card.id) ?? card), ...added];
 }
 
-/** Convenience wrapper for a whole plan. */
-export function applyImport(existing: readonly Flashcard[], plan: ImportPlan): Flashcard[] {
-  return mergeImport(existing, plan.added, plan.updated);
-}
-
 /** One-line-per-fact summary, for the terminal after an import. */
 export function describeReport(report: ImportReport): string[] {
   const lines = [`Read ${report.read} notes.`];

@@ -4,10 +4,15 @@ import { createStore } from '../state/store.js';
 import { selectCards } from '../state/selectors.js';
 import { formatAnkiText, parseAnkiText, type ExportRow } from '../core/csv.js';
 import { describeReport, planImport, type ImportedNote } from '../core/import.js';
-import { describeMedia } from '../core/media.js';
+import { describeMedia, hasMedia, mediaToHtml } from '../core/media.js';
 import { resolveConfigFile, resolveDataFile } from '../storage/paths.js';
 import { ApkgError, readApkg } from '../storage/apkg.js';
-import { contentName, createMediaStore, isImageName } from '../storage/media-store.js';
+import {
+  contentName,
+  createMediaStore,
+  isImageName,
+  mediaDirectory
+} from '../storage/media-store.js';
 import type { ImportPlan } from '../core/import.js';
 import type { Flashcard } from '../types/index.js';
 import type { ParsedArgs } from './args.js';
@@ -271,18 +276,24 @@ export function runExport(args: ParsedArgs): TransferResult {
       return fail('Nothing to export — the collection is empty.');
     }
 
+    // HTML only when there is a picture to carry. A readable "[image: x.png]"
+    // does not survive re-import — it comes back as literal text and, because
+    // the guid still matches, overwrites the good card with the degraded one.
+    // `<img>` round-trips, but `#html:true` would make a plain card containing
+    // a `<` be read back as markup, so a deck without media stays plain.
+    const withImages = cards.some(card => hasMedia(card.front) || hasMedia(card.back));
+    const render = withImages ? mediaToHtml : describeMedia;
+
     const rows: ExportRow[] = cards.map(card => ({
-      // Exported as text, so an image becomes a readable placeholder rather
-      // than a marker that means nothing outside this application.
-      front: describeMedia(card.front),
-      back: describeMedia(card.back),
+      front: render(card.front),
+      back: render(card.back),
       tags: card.tags,
       // A guid the card already has is kept, so exporting and re-importing
       // updates the same cards instead of duplicating them.
       ...(card.guid ? { guid: card.guid } : {})
     }));
 
-    const output = formatAnkiText(rows);
+    const output = formatAnkiText(rows, withImages ? { html: true } : {});
     const temporary = `${target}.${process.pid}.tmp`;
     try {
       fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -299,7 +310,8 @@ export function runExport(args: ParsedArgs): TransferResult {
     const lines = [`Exported ${cards.length} cards to ${target}`];
     if (withMedia > 0) {
       lines.push(
-        `${withMedia} cards reference images, which are named in the text but not copied.`
+        `${withMedia} cards reference images. The files stay in ${mediaDirectory()} —` +
+          ` copy them alongside if you are taking this to another machine.`
       );
     }
     lines.push('Import it into Anki with File → Import.');

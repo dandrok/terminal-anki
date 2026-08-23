@@ -74,12 +74,6 @@ function evictOldest(write: (text: string) => void): void {
 /** Files whose bytes the terminal already holds. */
 const sentFiles = new Set<string>();
 
-/** Forget everything sent, so a new run does not reuse a stale placement. */
-export function resetTransmittedImages(): void {
-  transmitted.clear();
-  sentFiles.clear();
-}
-
 export interface TerminalImageProps {
   /** Absolute path of the stored file. */
   file: string;

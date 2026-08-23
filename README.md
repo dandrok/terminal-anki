@@ -29,7 +29,7 @@ the file format is unchanged and 1.x collections load as they are.
 | Writes per grade | full file rewrite, every time        | Batched; ~1s exposure on a hard kill              |
 
 Under the hood: Ink 7 and React 19, no classes anywhere, `core/` is pure and framework-free,
-584 tests. See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
+1023 tests. See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
 
 ---
 
@@ -182,11 +182,14 @@ Notes it cannot represent are counted and reported rather than silently mangled:
 deletions** (`{{c1::…}}`) are skipped, **reverse cards** are not generated (the forward card
 still imports), and **audio** references are dropped.
 
-`--help` and `--version` never load Ink or React — they return in about **50ms**, and a test
+`--help` and `--version` never load Ink or React — they return in about **30ms**, and a test
 walks the static import graph to keep it that way. The interactive launch reaches its first
-frame in roughly **730ms**, of which about 450ms is `import('ink')` alone; the project's own 74
-modules account for around 45ms of it. That is why this ships as plain `tsc` output rather than
-a bundle — bundling would be optimising the 6% of startup that is ours.
+frame in roughly **350ms** warm, of which about 240ms is `import('ink')` alone; the project's
+own 90 modules account for around 26ms of it. A cold first launch is roughly twice that, while
+the page cache fills.
+
+That split is why this ships as plain `tsc` output rather than a bundle: bundling would be
+optimising the 7% of startup that is ours.
 
 ---
 
@@ -376,7 +379,7 @@ and "no import cycles".
 
 ### Testing
 
-584 tests, ~96% statement coverage on the non-presentational code.
+1023 tests, ~96% statement coverage on the non-presentational code.
 
 - **Pure functions** — `core/`, `config/` and `ui/charts/` are tested directly.
 - **The store** is driven with no renderer at all: batching, write-through, undo depth.
