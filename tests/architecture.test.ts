@@ -92,13 +92,31 @@ describe('layering', () => {
     }
   });
 
-  it('has no classes anywhere', () => {
-    // v2 replaced all three of them with closure factories; this is what stops
-    // a fourth appearing.
-    const offenders = FILES.filter(file =>
-      /^\s*(export\s+)?(abstract\s+)?class\s/m.test(fs.readFileSync(file, 'utf-8'))
-    );
+  it('has no classes except Error subtypes', () => {
+    // The rule is about stateful service objects — v2 replaced all three of
+    // them with closure factories, and this is what stops a fourth appearing.
+    // `class X extends Error` is deliberately allowed: subclassing Error is the
+    // language's own mechanism for a distinguishable failure, and `instanceof`
+    // is how the CLI decides between "explain this to the reader" and "this is
+    // a bug, let it surface". Writing that as a tagged plain object to satisfy
+    // the letter of the rule would be worse code.
+    const offenders = FILES.filter(file => {
+      const source = fs.readFileSync(file, 'utf-8');
+      const declarations = source.match(/^\s*(export\s+)?(abstract\s+)?class\s+\w+[^{]*/gm) ?? [];
+      return declarations.some(declaration => !/\bextends\s+Error\b/.test(declaration));
+    });
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps every Error subtype to a name and nothing else', () => {
+    // An error class earns its exemption by being a label. One that starts
+    // carrying behaviour is a service object wearing a disguise.
+    for (const file of FILES) {
+      const source = fs.readFileSync(file, 'utf-8');
+      for (const [, body] of source.matchAll(/class\s+\w+\s+extends\s+Error\s*\{([\s\S]*?)\n\}/g)) {
+        expect(body).not.toMatch(/^\s{2}(?!constructor\b)[\w$]+\s*\(/m);
+      }
+    }
   });
 
   it('has no import cycles', () => {

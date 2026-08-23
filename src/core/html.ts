@@ -58,29 +58,178 @@ const BLOCK_TAGS = new Set([
   'footer'
 ]);
 
-/** Named entities Anki's editor actually emits. */
+/**
+ * Named entities, covering Latin-1 and Latin Extended-A.
+ *
+ * The accented letters are not optional extras: language decks are the most
+ * shared kind there is, and without these every French and Spanish card
+ * imports reading "caf&eacute;" and "ni&ntilde;o".
+ */
 const ENTITIES: Record<string, string> = {
-  // A plain space, not U+00A0: a real non-breaking space would defeat Ink's
-  // word wrapping and measure oddly in some terminals.
+  Agrave: 'À',
+  Aacute: 'Á',
+  Acirc: 'Â',
+  Atilde: 'Ã',
+  Auml: 'Ä',
+  Aring: 'Å',
+  AElig: 'Æ',
+  Ccedil: 'Ç',
+  Egrave: 'È',
+  Eacute: 'É',
+  Ecirc: 'Ê',
+  Euml: 'Ë',
+  Igrave: 'Ì',
+  Iacute: 'Í',
+  Icirc: 'Î',
+  Iuml: 'Ï',
+  ETH: 'Ð',
+  Ntilde: 'Ñ',
+  Ograve: 'Ò',
+  Oacute: 'Ó',
+  Ocirc: 'Ô',
+  Otilde: 'Õ',
+  Ouml: 'Ö',
+  Oslash: 'Ø',
+  Ugrave: 'Ù',
+  Uacute: 'Ú',
+  Ucirc: 'Û',
+  Uuml: 'Ü',
+  Yacute: 'Ý',
+  THORN: 'Þ',
+  szlig: 'ß',
+  agrave: 'à',
+  aacute: 'á',
+  acirc: 'â',
+  atilde: 'ã',
+  auml: 'ä',
+  aring: 'å',
+  aelig: 'æ',
+  ccedil: 'ç',
+  egrave: 'è',
+  eacute: 'é',
+  ecirc: 'ê',
+  euml: 'ë',
+  igrave: 'ì',
+  iacute: 'í',
+  icirc: 'î',
+  iuml: 'ï',
+  eth: 'ð',
+  ntilde: 'ñ',
+  ograve: 'ò',
+  oacute: 'ó',
+  ocirc: 'ô',
+  otilde: 'õ',
+  ouml: 'ö',
+  oslash: 'ø',
+  ugrave: 'ù',
+  uacute: 'ú',
+  ucirc: 'û',
+  uuml: 'ü',
+  yacute: 'ý',
+  thorn: 'þ',
+  yuml: 'ÿ',
+  OElig: 'Œ',
+  oelig: 'œ',
+  Scaron: 'Š',
+  scaron: 'š',
+  Yuml: 'Ÿ',
+  iexcl: '¡',
+  cent: '¢',
+  pound: '£',
+  curren: '¤',
+  yen: '¥',
+  brvbar: '¦',
+  sect: '§',
+  uml: '¨',
+  copy: '©',
+  ordf: 'ª',
+  laquo: '«',
+  not: '¬',
+  shy: '­',
+  reg: '®',
+  macr: '¯',
+  deg: '°',
+  plusmn: '±',
+  sup2: '²',
+  sup3: '³',
+  acute: '´',
+  micro: 'µ',
+  para: '¶',
+  middot: '·',
+  cedil: '¸',
+  sup1: '¹',
+  ordm: 'º',
+  raquo: '»',
+  frac14: '¼',
+  frac12: '½',
+  frac34: '¾',
+  iquest: '¿',
+  times: '×',
+  divide: '÷',
+  ndash: '–',
+  mdash: '—',
+  lsquo: '‘',
+  rsquo: '’',
+  sbquo: '‚',
+  ldquo: '“',
+  rdquo: '”',
+  bdquo: '„',
+  dagger: '†',
+  Dagger: '‡',
+  bull: '•',
+  hellip: '…',
+  permil: '‰',
+  prime: '′',
+  Prime: '″',
+  lsaquo: '‹',
+  rsaquo: '›',
+  oline: '‾',
+  frasl: '⁄',
+  euro: '€',
+  trade: '™',
+  larr: '←',
+  uarr: '↑',
+  rarr: '→',
+  darr: '↓',
+  harr: '↔',
+  minus: '−',
+  lowast: '∗',
+  radic: '√',
+  infin: '∞',
+  ne: '≠',
+  le: '≤',
+  ge: '≥',
+  asymp: '≈',
+  equiv: '≡',
+  alpha: 'α',
+  beta: 'β',
+  gamma: 'γ',
+  delta: 'δ',
+  epsilon: 'ε',
+  theta: 'θ',
+  lambda: 'λ',
+  mu: 'μ',
+  pi: 'π',
+  sigma: 'σ',
+  phi: 'φ',
+  omega: 'ω',
+  Alpha: 'Α',
+  Beta: 'Β',
+  Gamma: 'Γ',
+  Delta: 'Δ',
+  Theta: 'Θ',
+  Lambda: 'Λ',
+  Pi: 'Π',
+  Sigma: 'Σ',
+  Phi: 'Φ',
+  Omega: 'Ω',
   nbsp: ' ',
   amp: '&',
   lt: '<',
   gt: '>',
   quot: '"',
   apos: "'",
-  '#39': "'",
-  hellip: '…',
-  mdash: '—',
-  ndash: '–',
-  laquo: '«',
-  raquo: '»',
-  deg: '°',
-  times: '×',
-  divide: '÷',
-  rsquo: '’',
-  lsquo: '‘',
-  ldquo: '“',
-  rdquo: '”'
+  '#39': "'"
 };
 
 export interface HtmlToTextResult {
@@ -119,13 +268,20 @@ export function decodeEntities(input: string): string {
   });
 }
 
-/** Read one attribute out of a tag's attribute string. */
+/**
+ * Read one attribute out of a tag's attribute string.
+ *
+ * The name has to start the string or follow whitespace. Without that, asking
+ * for `src` matched inside `data-src` — and a lazy-loading deck writes
+ * `<img data-src="placeholder.png" src="real.png">`, so the wrong file won.
+ */
 function attribute(attributes: string, name: string): string | undefined {
-  const quoted = new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i').exec(attributes);
+  const boundary = `(?:^|\\s)${name}\\s*=\\s*`;
+  const quoted = new RegExp(`${boundary}("([^"]*)"|'([^']*)')`, 'i').exec(attributes);
   if (quoted) {
     return quoted[2] ?? quoted[3];
   }
-  const bare = new RegExp(`${name}\\s*=\\s*([^\\s>]+)`, 'i').exec(attributes);
+  const bare = new RegExp(`${boundary}([^\\s>]+)`, 'i').exec(attributes);
   return bare?.[1];
 }
 
@@ -181,7 +337,7 @@ export function htmlToText(input: string, options: HtmlToTextOptions = {}): Html
 
   // Script and style content is not card text; drop the whole element rather
   // than stripping the tags and leaving the code behind as prose.
-  output = output.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+  output = output.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
   output = output.replace(/<!--[\s\S]*?-->/g, '');
 
   output = output.replace(

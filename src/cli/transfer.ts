@@ -6,6 +6,10 @@ import { formatAnkiText, parseAnkiText, type ExportRow } from '../core/csv.js';
 import { describeReport, planImport, type ImportedNote } from '../core/import.js';
 import { describeMedia } from '../core/media.js';
 import { resolveConfigFile, resolveDataFile } from '../storage/paths.js';
+import { ApkgError, readApkg } from '../storage/apkg.js';
+import { createMediaStore } from '../storage/media-store.js';
+import type { ImportPlan } from '../core/import.js';
+import type { Flashcard } from '../types/index.js';
 import type { ParsedArgs } from './args.js';
 
 /**
@@ -32,6 +36,121 @@ function toFieldIndex(value: number | undefined, fallback: number): number {
   return value === undefined ? fallback : value - 1;
 }
 
+/**
+ * Report a plan and, unless this is a dry run, commit it.
+ *
+ * Shared by both import paths so a text file and a package cannot come to
+ * disagree about what `--dry-run` does or what the summary says.
+ */
+function commitPlan(
+  plan: ImportPlan,
+  args: ParsedArgs,
+  now: Date,
+  before: readonly string[]
+): TransferResult {
+  const lines = [...before, ...describeReport(plan.report)];
+
+  if (plan.report.sample.length > 0) {
+    // Printed so a wrong field mapping is obvious now, rather than after three
+    // thousand cards are already in the collection.
+    lines.push('', 'First cards:');
+    for (const card of plan.report.sample) {
+      lines.push(`  ${describeMedia(card.front)}  →  ${describeMedia(card.back)}`);
+    }
+    lines.push('', 'Wrong way round? Re-run with --front and --back.');
+  }
+
+  if (args.dryRun) {
+    lines.push('', 'Dry run — nothing was written.');
+    return { code: 0, lines };
+  }
+  if (plan.added.length === 0 && plan.updated.length === 0) {
+    return { code: 0, lines };
+  }
+
+  const store = createStore({ seedSampleCards: false });
+  try {
+    store.dispatch({ type: 'cards/import', added: plan.added, updated: plan.updated, now });
+    store.flush();
+    lines.push('', `Saved to ${store.dataFile}`);
+    return { code: 0, lines };
+  } finally {
+    store.dispose();
+  }
+}
+
+/** The cards already in the collection, for duplicate detection. */
+function existingCards(): Flashcard[] {
+  const store = createStore({ seedSampleCards: false });
+  try {
+    return [...selectCards(store.getSnapshot())];
+  } finally {
+    store.dispose();
+  }
+}
+
+/**
+ * Import an Anki deck package.
+ *
+ * Media is written before the cards, so a marker in a card's text always points
+ * at a file that is already on disk. A failed write drops that one picture
+ * rather than the deck.
+ */
+function importPackage(args: ParsedArgs, file: string, now: Date): TransferResult {
+  let deck;
+  try {
+    deck = readApkg(file);
+  } catch (error) {
+    if (error instanceof ApkgError) {
+      return fail(`Could not read ${path.basename(file)}: ${error.message}`);
+    }
+    throw error;
+  }
+
+  if (deck.notes.length === 0) {
+    return fail(`${path.basename(file)} contains no notes.`);
+  }
+
+  const store = createMediaStore();
+  const stored = new Map<string, string>();
+  if (!args.dryRun) {
+    for (const [original, contents] of deck.media) {
+      const name = store.put(original, contents);
+      if (name) {
+        stored.set(original, name);
+      }
+    }
+  }
+
+  // Deck names become tags, but each note brings its own — a package holds a
+  // deck tree, so applying one name to the whole file labelled cards that were
+  // nowhere near it.
+  const plan = planImport(deck.notes, existingCards(), {
+    frontField: toFieldIndex(args.front, 0),
+    backField: toFieldIndex(args.back, 1),
+    html: true,
+    // On a dry run nothing was written, so every image resolves to nothing and
+    // the report counts the media it *would* have stored separately.
+    resolveMedia: name => stored.get(name),
+    ...(args.tag ? { extraTags: [args.tag] } : {}),
+    now
+  });
+
+  const opening = [
+    `Reading ${file}`,
+    `Anki package, ${deck.format}${deck.deckName ? `, deck "${deck.deckName}"` : ''}.`
+  ];
+  if (deck.media.size > 0) {
+    opening.push(
+      args.dryRun
+        ? `${deck.media.size} media files found (a dry run stores none).`
+        : `${stored.size} of ${deck.media.size} media files stored in ${store.directory}`
+    );
+  }
+
+  return commitPlan(plan, args, now, opening);
+}
+
 export function runImport(args: ParsedArgs, now: Date = new Date()): TransferResult {
   const file = args.file;
   if (!file) {
@@ -44,11 +163,7 @@ export function runImport(args: ParsedArgs, now: Date = new Date()): TransferRes
   const extension = path.extname(file).toLowerCase();
 
   if (extension === '.apkg' || extension === '.colpkg') {
-    // Landing next. Saying so beats a confusing parse failure on a zip.
-    return fail(
-      `Anki package files are not supported yet — only ${[...TEXT_EXTENSIONS].join(', ')}.\n` +
-        `For now, open the deck in Anki and use File → Export → Notes in Plain Text.`
-    );
+    return importPackage(args, file, now);
   }
   if (!TEXT_EXTENSIONS.has(extension)) {
     return fail(`Don't know how to read ${extension || 'a file with no extension'}: ${file}`);
@@ -89,47 +204,17 @@ export function runImport(args: ParsedArgs, now: Date = new Date()): TransferRes
   });
 
   // No sample cards. Seeding is for somebody opening the application for the
-  // first time; importing a deck into an empty collection would otherwise
-  // silently add five cards about spaced repetition that nobody asked for.
-  const store = createStore({ seedSampleCards: false });
-  try {
-    const existing = selectCards(store.getSnapshot());
-    const plan = planImport(notes, existing, {
-      frontField,
-      backField,
-      html: parsed.headers.html,
-      ...(args.tag ? { extraTags: [args.tag] } : {}),
-      now
-    });
+  // first time; importing into an empty collection would otherwise silently add
+  // five cards about spaced repetition that nobody asked for.
+  const plan = planImport(notes, existingCards(), {
+    frontField,
+    backField,
+    html: parsed.headers.html,
+    ...(args.tag ? { extraTags: [args.tag] } : {}),
+    now
+  });
 
-    const lines = [`Reading ${file}`, ...describeReport(plan.report)];
-
-    if (plan.report.sample.length > 0) {
-      // Printed so a wrong field mapping is obvious now, rather than after
-      // three thousand cards are already in the collection.
-      lines.push('', 'First cards:');
-      for (const card of plan.report.sample) {
-        lines.push(`  ${describeMedia(card.front)}  →  ${describeMedia(card.back)}`);
-      }
-      lines.push('', 'Wrong way round? Re-run with --front and --back.');
-    }
-
-    if (args.dryRun) {
-      lines.push('', 'Dry run — nothing was written.');
-      return { code: 0, lines };
-    }
-
-    if (plan.added.length === 0 && plan.updated.length === 0) {
-      return { code: 0, lines };
-    }
-
-    store.dispatch({ type: 'cards/import', added: plan.added, updated: plan.updated, now });
-    store.flush();
-    lines.push('', `Saved to ${store.dataFile}`);
-    return { code: 0, lines };
-  } finally {
-    store.dispose();
-  }
+  return commitPlan(plan, args, now, [`Reading ${file}`]);
 }
 
 export function runExport(args: ParsedArgs): TransferResult {

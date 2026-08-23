@@ -18,6 +18,27 @@ describe('decodeEntities', () => {
     expect(decodeEntities(input)).toBe(expected);
   });
 
+  it.each([
+    ['caf&eacute;', 'café'],
+    ['ni&ntilde;o', 'niño'],
+    ['&uuml;ber', 'über'],
+    ['stra&szlig;e', 'straße'],
+    ['&Aring;ngstr&ouml;m', 'Ångström'],
+    ['&ccedil;a va', 'ça va'],
+    ['&frac12; &plusmn; &deg;', '½ ± °']
+  ])('decodes the accented letters a language deck is full of: %j', (input, expected) => {
+    // Language decks are the most shared kind there is. Without these, every
+    // French and Spanish card imports reading "caf&eacute;".
+    expect(decodeEntities(input)).toBe(expected);
+  });
+
+  it('decodes nbsp to a plain space, not U+00A0', () => {
+    // A real non-breaking space defeats Ink's word wrapping and measures oddly
+    // in some terminals.
+    expect(decodeEntities('a&nbsp;b')).toBe('a b');
+    expect(decodeEntities('a&nbsp;b').charCodeAt(1)).toBe(32);
+  });
+
   it('leaves an unknown entity exactly as written', () => {
     // Mangling it into a replacement character loses information the reader
     // could otherwise still make sense of.
@@ -90,12 +111,18 @@ describe('htmlToText', () => {
     expect(text('a<style>.x{color:red}</style>b')).toBe('ab');
   });
 
+  it('drops them even when the closing tag carries whitespace', () => {
+    // Otherwise the tags go and the code stays behind as prose.
+    expect(text('a<script >alert(1)</script >b')).toBe('ab');
+    expect(text('a<style >.x{}</style >b')).toBe('ab');
+  });
+
   it('drops comments', () => {
     expect(text('a<!-- note to self -->b')).toBe('ab');
   });
 
   it('decodes entities after stripping tags', () => {
-    expect(text('<div>caf&eacute;&nbsp;au lait</div>')).toBe('caf&eacute; au lait');
+    expect(text('<div>caf&eacute;&nbsp;au lait</div>')).toBe('café au lait');
     expect(text('<b>&amp;</b>')).toBe('&');
   });
 });
@@ -120,6 +147,16 @@ describe('htmlToText media', () => {
 
   it('decodes an entity-escaped filename', () => {
     expect(htmlToText('<img src="a&amp;b.png">').images).toEqual(['a&b.png']);
+  });
+
+  it('does not mistake data-src for src', () => {
+    // A lazy-loading deck writes both, and the placeholder came first.
+    const result = htmlToText('<img data-src="placeholder.png" src="real.png">');
+    expect(result.images).toEqual(['real.png']);
+  });
+
+  it('still reads data-src when that is all there is', () => {
+    expect(htmlToText('<img data-src="only.png">').images).toEqual([]);
   });
 
   it('drops an img with no src', () => {

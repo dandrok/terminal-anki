@@ -162,11 +162,11 @@ describe('runImport', () => {
     expect(result.lines.join('\n')).toContain('know how to read');
   });
 
-  it('says a package file is not supported yet, and what to do instead', () => {
-    const file = write('deck.apkg', 'PK');
+  it('explains a package file it cannot open', () => {
+    const file = write('deck.apkg', 'this is not a zip');
     const result = run(['import', file]);
     expect(result.code).toBe(1);
-    expect(result.lines.join('\n')).toContain('Notes in Plain Text');
+    expect(result.lines.join('\n')).toContain('Could not read deck.apkg');
   });
 
   it('reports an empty file rather than importing nothing quietly', () => {
@@ -233,5 +233,111 @@ describe('runExport', () => {
     run(['import', path.join(workspace, 'in.csv')]);
     run(['export', path.join(workspace, 'out.csv')]);
     expect(fs.readdirSync(workspace).filter(name => name.includes('.tmp'))).toEqual([]);
+  });
+});
+
+describe('runImport from an Anki package', () => {
+  const fixture = (name: string) => path.join(process.cwd(), 'tests', 'fixtures', name);
+
+  it('imports a legacy package', () => {
+    const result = run(['import', fixture('legacy.apkg')]);
+    expect(result.code).toBe(0);
+
+    const cards = storedCards();
+    expect(cards.map(card => card.front)).toContain('hola');
+    expect(cards.find(card => card.front === 'hola')?.back).toBe('hello');
+  });
+
+  it('imports a modern zstd package identically', () => {
+    run(['import', fixture('modern.apkg')]);
+    const fromModern = storedCards()
+      .map(card => card.front)
+      .sort();
+
+    fs.rmSync(path.join(workspace, 'data'), { recursive: true, force: true });
+    run(['import', fixture('legacy.apkg')]);
+    expect(
+      storedCards()
+        .map(card => card.front)
+        .sort()
+    ).toEqual(fromModern);
+  });
+
+  it('says which format it read and names the deck', () => {
+    const output = run(['import', fixture('legacy.apkg'), '--dry-run']).lines.join('\n');
+    expect(output).toContain('collection.anki2');
+    expect(output).toContain('Spanish::Verbs');
+  });
+
+  it('converts the HTML that fills a real deck', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const cat = storedCards().find(card => card.front.startsWith('el gato'));
+    // <i> dropped, <br> became a line break.
+    expect(cat?.front).toBe('el gato\n(animal)');
+  });
+
+  it('keeps the scheduling instead of resetting the deck to new', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const reviewed = storedCards().find(card => card.front === 'hola');
+    expect(reviewed).toMatchObject({ interval: 45, repetitions: 7, easiness: 2.65 });
+  });
+
+  it('tags each card with the deck it was actually in', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const cards = storedCards();
+    expect(cards.find(card => card.front === 'hola')?.tags).toContain('spanish::verbs');
+    // This one sits in Default, which is nobody's choice of deck.
+    expect(cards.find(card => card.front === 'correr')?.tags).not.toContain('spanish::verbs');
+  });
+
+  it('stores the images and points the card text at them', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const withImage = storedCards().find(card => card.media && card.media.length > 0);
+    expect(withImage).toBeDefined();
+
+    const stored = path.join(workspace, 'data', 'media', withImage!.media![0]);
+    expect(fs.existsSync(stored)).toBe(true);
+    expect(fs.readFileSync(stored).subarray(1, 4).toString('utf-8')).toBe('PNG');
+    expect(withImage!.front).toContain(withImage!.media![0]);
+  });
+
+  it('stores no media on a dry run', () => {
+    run(['import', fixture('legacy.apkg'), '--dry-run']);
+    expect(fs.existsSync(path.join(workspace, 'data', 'media'))).toBe(false);
+  });
+
+  it('reports what it could not bring across', () => {
+    const output = run(['import', fixture('legacy.apkg'), '--dry-run']).lines.join('\n');
+    expect(output).toContain('cloze notes skipped');
+    expect(output).toContain('reverse card that was not created');
+    expect(output).toContain('audio references dropped');
+  });
+
+  it('is idempotent, and across formats', () => {
+    // Both packages hold the same notes with the same guids, so the second
+    // import should refresh rather than duplicate.
+    run(['import', fixture('legacy.apkg')]);
+    const first = storedCards().length;
+
+    const second = run(['import', fixture('modern.apkg')]);
+    expect(storedCards()).toHaveLength(first);
+    expect(second.lines.join('\n')).toContain('updated');
+  });
+
+  it('refuses a package with no collection in it', () => {
+    const result = run(['import', fixture('not-a-deck.apkg')]);
+    expect(result.code).toBe(1);
+    expect(result.lines.join('\n')).toContain('no Anki collection');
+  });
+
+  it('exports what it imported', () => {
+    run(['import', fixture('legacy.apkg')]);
+    const target = path.join(workspace, 'out.csv');
+    expect(run(['export', target]).code).toBe(0);
+
+    const contents = fs.readFileSync(target, 'utf-8');
+    expect(contents).toContain('hola');
+    // An image becomes a readable placeholder outside this application.
+    expect(contents).toContain('[image:');
   });
 });

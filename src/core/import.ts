@@ -22,6 +22,14 @@ export interface ImportedNote {
   guid?: string;
   /** How many cards Anki would generate. >1 means a reverse card exists. */
   cardCount?: number;
+  /**
+   * The deck this note sits in, which becomes a tag.
+   *
+   * Per note rather than per file: a package holds a deck tree, and tagging
+   * every note with the first deck name found labelled cards that were
+   * nowhere near it.
+   */
+  deck?: string;
   /** Scheduling carried over from the source, when it has any. */
   scheduling?: Partial<Pick<Flashcard, 'easiness' | 'interval' | 'repetitions' | 'nextReview'>>;
 }
@@ -179,7 +187,7 @@ export function planImport(
     }
     seenFront.add(key);
 
-    const tags = normalizeTags([...note.tags, ...extraTags]);
+    const tags = normalizeTags([...note.tags, ...(note.deck ? [note.deck] : []), ...extraTags]);
     const files = mediaOf(front, back);
     for (const file of files) {
       media.add(file);

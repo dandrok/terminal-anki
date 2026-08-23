@@ -126,15 +126,38 @@ Themes use Ink colour **names**, not hex, so your terminal's own colour scheme s
 ```bash
 anki                      # interactive
 anki --study              # jump straight into due cards
+anki import deck.apkg     # import a deck downloaded from AnkiWeb
 anki import deck.csv      # import an Anki text export
 anki export deck.csv      # export your cards for Anki
 anki --version
 anki --help
 ```
 
-### Import and export
+### Importing a shared deck
 
-The file format is **Anki's own tab-separated text export**, so one file works in both
+```bash
+anki import ~/Downloads/ultimate-geography.apkg
+```
+
+Reads **`.apkg` packages straight from AnkiWeb**, both the modern zstd format and the older
+one, with no dependencies — Node's own `sqlite` and `zlib` do the work. Cards keep their
+**scheduling**, so a deck you have already been studying arrives with its intervals intact
+rather than resetting to new. Deck names become tags, per card, so a package holding a deck
+tree does not label everything with one name. Images are stored and referenced in the card.
+
+Notes it cannot represent are counted and reported rather than silently mangled:
+
+```
+Read 7 notes.
+5 added.
+1 cloze notes skipped — cloze cards are not supported.
+1 notes had a reverse card that was not created.
+1 audio references dropped — audio is not supported.
+```
+
+### Text files
+
+The other format is **Anki's own tab-separated text export**, so one file works in both
 applications — export here and import in Anki desktop, or the reverse, with no converter.
 
 ```bash
@@ -156,9 +179,6 @@ alone. An import is a single undo step, however many cards it brought in.
 Notes it cannot represent are counted and reported rather than silently mangled: **cloze
 deletions** (`{{c1::…}}`) are skipped, **reverse cards** are not generated (the forward card
 still imports), and **audio** references are dropped.
-
-> **`.apkg` files are not supported yet.** That is next. For now, open the deck in Anki and use
-> _File → Export → Notes in Plain Text_.
 
 `--help` and `--version` never load Ink or React — they return in about **50ms**, and a test
 walks the static import graph to keep it that way. The interactive launch reaches its first

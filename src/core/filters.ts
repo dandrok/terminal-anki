@@ -97,11 +97,19 @@ export function collectTags(cards: readonly Flashcard[]): string[] {
   return [...tags].sort();
 }
 
-/** Trim, lower-case and de-duplicate a raw tag list. */
+/**
+ * Trim, lower-case, de-space and de-duplicate a raw tag list.
+ *
+ * Internal whitespace becomes a hyphen because "a tag contains no whitespace"
+ * is an invariant the rest of the system relies on: Anki separates tags with
+ * spaces and so does our own text export, so a tag like "ultimate geography"
+ * silently came back from a round trip as two tags. Importing a deck whose
+ * name has a space in it — which is most of them — made that routine.
+ */
 export function normalizeTags(tags: readonly string[]): string[] {
   const seen = new Set<string>();
   for (const tag of tags) {
-    const normalized = tag.trim().toLowerCase();
+    const normalized = tag.trim().toLowerCase().replace(/\s+/g, '-');
     if (normalized) {
       seen.add(normalized);
     }

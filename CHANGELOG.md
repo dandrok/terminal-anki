@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Import a deck from AnkiWeb
+
+`anki import deck.apkg` reads Anki packages directly — both the modern zstd format every
+current deck uses and the older one — with **no new dependencies**. Node's built-in `sqlite`
+reads the collection and `zlib` handles the zip and the zstd.
+
+- **Scheduling comes across.** A deck you have already studied arrives with its intervals,
+  ease factors and review counts intact rather than resetting to new. Cards still in learning
+  arrive as new, since their interval is in seconds and means nothing here.
+- **Deck names become tags, per card.** A package holds a deck tree, so tagging every note
+  with one name would label cards that were nowhere near it. The "Default" deck is ignored.
+- **Images are stored** under `media/` in your data directory, named by a hash of their
+  contents so two decks shipping a different `heart.png` cannot overwrite each other. Cards
+  show `[image: …]` where the picture belongs until terminal image support lands.
+- Re-importing is idempotent across formats: the same deck as `.apkg` and `.csv`, or as legacy
+  and modern packages, updates rather than duplicates.
+
+Note types are never parsed, which is why this is small: field values come from the note, cloze
+is visible in the text, and a reverse card is a count over the note's cards.
+
 ### Import and export
 
 `anki import deck.csv` and `anki export deck.csv`, using **Anki's own tab-separated text
@@ -21,8 +41,15 @@ obvious before thousands of them land in your collection.
 - A whole import is one undo step, however many cards it brought in.
 - Cloze notes, reverse cards and audio are counted and reported rather than silently mangled.
 
-`.apkg` files are not supported yet; importing one says so and points at Anki's plain-text
-export.
+### Also fixed
+
+- **Accented characters imported as raw entities.** `caf&eacute;` and `ni&ntilde;o` came
+  through literally, which affected every French, Spanish and German deck — the most shared
+  kind there is. The full Latin-1 entity set now decodes.
+- **A tag containing a space became two tags** after an export/import round trip, because both
+  Anki and our text format separate tags with spaces. Internal whitespace now becomes a hyphen.
+  Existing tags with spaces are converted on the next load.
+- `<img data-src="placeholder.png" src="real.png">` imported the placeholder.
 
 ## 2.0.0
 
