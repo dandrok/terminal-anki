@@ -76,7 +76,7 @@ would skip the verification job and the provenance attestation.
 | Workflow      | Trigger                       | Jobs                                                                        |
 | ------------- | ----------------------------- | --------------------------------------------------------------------------- |
 | `version.yml` | manual dispatch from `main`   | `bump`: check, compute the version, verify the changelog, commit, tag, push |
-| `release.yml` | a `v*.*.*` tag, or dispatched | `verify`: check + build + tag/version agreement                             |
+| `release.yml` | a `v*.*.*` tag, or dispatched | `verify`: check + build + tag/version agreement + changelog section         |
 |               |                               | `publish`: `npm ci`, build, `npm publish` with provenance (after approval)  |
 |               |                               | `announce`: GitHub release from the changelog section                       |
 
@@ -95,6 +95,9 @@ omitting `cache:` alone still caches.
   (`git push --delete origin vX.Y.Z`), fix, tag again.
 - **The Version workflow fails on the changelog check.** Add the `## X.Y.Z` section to
   `CHANGELOG.md`, push it, and run Version again. Nothing was tagged.
+- **A tag pushed by hand fails Release's verify on the changelog check.** Same rule, applied to
+  the path the Version workflow does not cover: `verify` refuses the tag before `publish` runs,
+  so nothing reaches npm. Add the section, then re-run Release at the tag.
 - **Published something broken.** Do not unpublish; npm blocks republishing the same version.
   Cut a patch release. Use `npm deprecate terminal-anki@X.Y.Z "reason"` to warn people off.
 - **The publish step fails on authentication.** Check that the workflow filename, environment
