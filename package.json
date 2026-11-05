@@ -69,7 +69,8 @@
   "homepage": "https://github.com/dandrok/terminal-anki#readme",
   "dependencies": {
     "ink": "^7.1.1",
-    "react": "^19.2.8"
+    "react": "^19.2.8",
+    "string-width": "^8.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -83,7 +84,6 @@
     "ink-testing-library": "^4.0.0",
     "prettier": "^3.9.6",
     "simple-git-hooks": "^2.13.1",
-    "string-width": "^8.2.0",
     "tsx": "^4.23.12",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.67.0",

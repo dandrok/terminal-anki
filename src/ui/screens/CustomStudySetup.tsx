@@ -166,7 +166,7 @@ export function CustomStudySetup({
   const tagLabel =
     allTags.length === 0
       ? 'no tags yet'
-      : `${selectedTags.includes(allTags[tagIndex] ?? '') ? '☑' : '☐'} ${allTags[tagIndex]}` +
+      : `${selectedTags.includes(allTags[tagIndex] ?? '') ? '[x]' : '[ ]'} ${allTags[tagIndex]}` +
         (selectedTags.length > 0 ? `  (${selectedTags.length} selected)` : '');
 
   return (

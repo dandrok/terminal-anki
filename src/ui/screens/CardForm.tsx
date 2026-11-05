@@ -146,7 +146,7 @@ export function CardForm({ card, onSave, onCancel }: CardFormProps) {
 
   return (
     <Layout
-      title={card ? '✎ Edit card' : '+ New card'}
+      title={card ? '▸ Edit card' : '+ New card'}
       status={isValid ? undefined : 'front and back are required'}
       controls={FORM_CONTROLS}
       isHelpOpen={isHelpOpen}

@@ -194,7 +194,7 @@ export function Analytics({ onBack, onQuit }: AnalyticsProps) {
 
   return (
     <Layout
-      title="◰ Analytics & history"
+      title="◶ Analytics & history"
       status={VIEW_LABELS[view]}
       controls={ANALYTICS_CONTROLS}
       isHelpOpen={isHelpOpen}

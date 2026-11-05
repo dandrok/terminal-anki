@@ -32,7 +32,7 @@ export function Achievements({ onBack, onQuit }: AchievementsProps) {
 
   return (
     <Layout
-      title="◑ Achievements"
+      title="✓ Achievements"
       status={`${unlocked}/${achievements.length} unlocked`}
       controls={READONLY_CONTROLS}
       isHelpOpen={isHelpOpen}
