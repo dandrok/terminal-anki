@@ -1,6 +1,8 @@
 # Releasing
 
-Releases are cut from `main` and published by tagging. Nothing is published by hand.
+Releases are cut from `main` by the **Version** workflow, verified and published by the
+**Release** workflow. Nothing is published by hand, and nothing is tagged before its changelog
+entry exists.
 
 ## Once, on npmjs.com
 
@@ -27,33 +29,57 @@ required reviewer. That is what stops a tag from publishing without a human look
 
 ## Cutting a release
 
-1. Land everything on `main` and make sure CI is green.
-2. Bump the version. Follow semver against the **public API** — the `bin`, the CLI flags, the
-   `src/index.ts` exports, and the on-disk file format:
+1. **Write the notes first.** Add a `## X.Y.Z` section to [`CHANGELOG.md`](CHANGELOG.md) and
+   land it on `main`. This is not paperwork: the GitHub release body is that section, and the
+   Version workflow refuses to tag a version it cannot find there.
 
-   ```bash
-   npm version patch   # or minor / major
-   ```
+   Follow semver against the **public API** — the `bin`, the CLI flags, the `src/index.ts`
+   exports, and the on-disk file format.
 
-   `npm version` writes `package.json`, commits, and creates the tag.
+2. **Run the Version workflow.** Actions → **Version** → _Run workflow_ → pick `patch`, `minor`
+   or `major`. It:
 
-3. Push the commit and the tag:
+   - runs `npm run check` — the same gate as a pull request;
+   - computes the next version with `scripts/next-version.ts`;
+   - checks `CHANGELOG.md` has the matching section (`scripts/release-notes.ts`);
+   - commits `release: X.Y.Z`, tags `vX.Y.Z`, and pushes both.
 
-   ```bash
-   git push origin main --follow-tags
-   ```
+   There is a `dry-run` switch: it does everything except the commit and the tag, and prints
+   the version it would have used.
 
-4. Approve the deployment when GitHub asks. The `publish` job waits for it.
+3. **Approve the deployment.** Version dispatches Release at the tag it just pushed — a tag
+   pushed with `GITHUB_TOKEN` does not trigger workflows by itself, so the dispatch is explicit.
+   Release's `publish` job waits on the `npm-publish` environment; approve it when GitHub asks.
 
-## What the workflow does
+4. **Check the release page.** Once npm has the package, the `announce` job creates a GitHub
+   release titled `vX.Y.Z` with the changelog section as its body.
 
-| Job       | Runs                                                                         |
-| --------- | ---------------------------------------------------------------------------- |
-| `verify`  | `npm run check`, `npm run build`, and asserts the tag matches `package.json` |
-| `publish` | `npm ci`, `npm run build`, `npm publish` with provenance                     |
+### Doing it by hand
 
-The `publish` job is gated on a `v*` tag ref, so running the workflow manually from the Actions
-tab only ever runs `verify` — it cannot publish from a branch.
+The workflows listen for a tag, not for the bot, so a manual release is still possible — for a
+hotfix when Actions is unavailable, say:
+
+```bash
+# CHANGELOG.md already has the ## X.Y.Z section
+npm version patch          # writes package.json, commits, tags
+git push origin main --follow-tags
+```
+
+The tag is the signal either way. Nothing needs to be published from a laptop, and doing so
+would skip the verification job and the provenance attestation.
+
+## What each workflow does
+
+| Workflow      | Trigger                       | Jobs                                                                        |
+| ------------- | ----------------------------- | --------------------------------------------------------------------------- |
+| `version.yml` | manual dispatch from `main`   | `bump`: check, compute the version, verify the changelog, commit, tag, push |
+| `release.yml` | a `v*.*.*` tag, or dispatched | `verify`: check + build + tag/version agreement                             |
+|               |                               | `publish`: `npm ci`, build, `npm publish` with provenance (after approval)  |
+|               |                               | `announce`: GitHub release from the changelog section                       |
+
+The `publish` job is gated on a `v*` tag ref, so running Release manually from the Actions tab
+only ever runs `verify` — it cannot publish from a branch. `announce` needs `publish`, so a
+failed publish never leaves a release page pointing at a version nobody can install.
 
 The `publish` job holds `id-token: write`, so it deliberately runs **without** a dependency
 cache: a poisoned cache entry would execute in the one place a publish can be triggered.
@@ -64,6 +90,8 @@ omitting `cache:` alone still caches.
 
 - **Tag pushed with the wrong version.** `verify` fails before `publish` runs. Delete the tag
   (`git push --delete origin vX.Y.Z`), fix, tag again.
+- **The Version workflow fails on the changelog check.** Add the `## X.Y.Z` section to
+  `CHANGELOG.md`, push it, and run Version again. Nothing was tagged.
 - **Published something broken.** Do not unpublish; npm blocks republishing the same version.
   Cut a patch release. Use `npm deprecate terminal-anki@X.Y.Z "reason"` to warn people off.
 - **The publish step fails on authentication.** Check that the workflow filename, environment
@@ -73,7 +101,9 @@ omitting `cache:` alone still caches.
 ## Checklist before a major
 
 - [ ] `npm run check` and `npm run build` green locally
+- [ ] `CHANGELOG.md` has the `## X.Y.Z` section and it describes what actually shipped
 - [ ] The README describes what the release actually does
 - [ ] Breaking changes to `src/index.ts` are listed in the README's library section
 - [ ] The on-disk schema version is either unchanged or has a migration path
 - [ ] The CLI has been driven by hand — menu, study, undo, browse, settings, exit
+- [ ] `docs/demo.gif` still matches the UI (`npm run demo` if it does not)
