@@ -2,9 +2,12 @@
 
 Flashcards with spaced repetition, in your terminal. Two keystrokes per card.
 
+[![npm](https://img.shields.io/npm/v/terminal-anki?style=flat-square)](https://www.npmjs.com/package/terminal-anki)
+[![CI](https://github.com/dandrok/terminal-anki/actions/workflows/ci.yml/badge.svg)](https://github.com/dandrok/terminal-anki/actions/workflows/ci.yml)
 ![Node](https://img.shields.io/badge/node-%3E%3D24-339933?style=flat-square)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-007ACC?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+
+![Terminal Anki: the menu, a four-card study session, the activity grid and the settings preview](https://raw.githubusercontent.com/dandrok/terminal-anki/main/docs/demo.gif)
 
 ```bash
 npm install -g terminal-anki
@@ -13,12 +16,38 @@ anki
 
 ---
 
-## What v2 changes
+## Contents
+
+- [What v2 changed](#what-v2-changed)
+- [Keys](#keys)
+- [Screens](#screens)
+  - [The activity grid](#the-activity-grid)
+- [Images on cards](#images-on-cards)
+- [Settings](#settings)
+- [CLI](#cli)
+  - [Importing a shared deck](#importing-a-shared-deck)
+  - [Text files](#text-files)
+- [Your data](#your-data)
+  - [How writes are handled](#how-writes-are-handled)
+  - [Batched writes](#batched-writes)
+- [Upgrading from 1.x](#upgrading-from-1x)
+- [Using it as a library](#using-it-as-a-library)
+- [Development](#development)
+  - [Structure](#structure)
+  - [Testing](#testing)
+  - [Hooks and CI](#hooks-and-ci)
+  - [Recording the demo](#recording-the-demo)
+- [Credits](#credits)
+- [License](#license)
+
+---
+
+## What v2 changed
 
 v2 is a rewrite of everything above the learning rules. **Your data carries over untouched** —
 the file format is unchanged and 1.x collections load as they are.
 
-|                  | 1.x                                  | 2.0                                               |
+|                  | 1.x                                  | 2.x                                               |
 | ---------------- | ------------------------------------ | ------------------------------------------------- |
 | Grading a card   | 4 keystrokes, positions move         | **2 fixed keystrokes**                            |
 | Screen           | `console.log`, summaries scroll away | Persistent frame that stays put                   |
@@ -28,8 +57,10 @@ the file format is unchanged and 1.x collections load as they are.
 | Themes           | none                                 | Four, previewed live before you commit            |
 | Writes per grade | full file rewrite, every time        | Batched; ~1s exposure on a hard kill              |
 
-Under the hood: Ink 7 and React 19, no classes anywhere, `core/` is pure and framework-free,
-1023 tests. See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
+Under the hood: Ink 7 and React 19, no classes anywhere, `core/` is pure and framework-free.
+See [Upgrading from 1.x](#upgrading-from-1x) for the two behaviour changes worth knowing.
+
+[↑ Contents](#contents)
 
 ---
 
@@ -64,6 +95,8 @@ the navigation keys. The one exception is announced rather than hidden: while a 
 focus, `q` and `?` type characters, so those footers show `[esc] back` alone instead of naming
 keys that do something else.
 
+[↑ Contents](#contents)
+
 ---
 
 ## Screens
@@ -77,7 +110,7 @@ keys that do something else.
 | **Achievements** | Eight of them, with progress on the locked ones.                                                  |
 | **Analytics**    | Three panes on `←→`: activity heatmap, session history, tag breakdown.                            |
 | **Quick stats**  | Counts, due today, and the new/learning/young/mature split.                                       |
-| **Settings**     | Theme, daily goal, history span, session size, card order.                                        |
+| **Settings**     | Theme, images, daily goal, history span, session size, card order.                                |
 
 ### The activity grid
 
@@ -101,6 +134,35 @@ darkens the whole grid the moment you have one unusually heavy day, so a steady 
 looking like it fell apart. The glyph ramp doubles the colour ramp, so the grid still reads
 with colour off. Day totals are bucketed by your **local** calendar, not UTC.
 
+[↑ Contents](#contents)
+
+---
+
+## Images on cards
+
+A card with a picture shows it, in whichever form the terminal can actually draw:
+
+| Terminal                                                              | What you get                         |
+| --------------------------------------------------------------------- | ------------------------------------ |
+| **kitty**, **ghostty**, **WezTerm**                                   | The real picture, at full resolution |
+| Anything else, with [`chafa`](https://hpjansson.org/chafa/) on `PATH` | Coloured block art                   |
+| Anything else                                                         | `[image: diagram.png]`               |
+
+There is no image decoder here and no new dependency: the encoded file goes straight to the
+terminal. Only the dimensions are read, from the header, so pictures keep their shape against
+terminal cells that are twice as tall as they are wide.
+
+The drawing uses kitty's **unicode placeholders** rather than a graphics escape, which is the
+only thing that works inside a laid-out frame: Ink measures every string to position it, and a
+graphics escape is not a sequence it knows to skip — a short one measures as twenty visible
+columns and takes the layout with it. Placeholders measure as one cell each.
+
+The **Images** setting overrides detection, which matters most under tmux: graphics escapes are
+only forwarded there with `allow-passthrough on`, so the protocol is off by default inside a
+multiplexer rather than risk painting escape sequences across the screen as text.
+
+[↑ Contents](#contents)
+
 ---
 
 ## Settings
@@ -112,12 +174,15 @@ and rows all recolour, so you are looking at the actual result rather than a swa
 | Setting      | Default       | What it affects                                         |
 | ------------ | ------------- | ------------------------------------------------------- |
 | Theme        | Default       | Every screen. Also: Forest, Monochrome, Dracula.        |
+| Images       | automatic     | How pictures are drawn: kitty, blocks, or filenames.    |
 | Daily goal   | 20 cards      | What fills a square on the activity grid.               |
 | History span | 15 weeks      | How far back the grid reaches.                          |
 | Session size | all due cards | Which row is preselected when you start studying.       |
 | Card order   | shuffled      | Whether a session takes its cards in order or shuffled. |
 
 Themes use Ink colour **names**, not hex, so your terminal's own colour scheme still applies.
+
+[↑ Contents](#contents)
 
 ---
 
@@ -191,6 +256,8 @@ the page cache fills.
 That split is why this ships as plain `tsc` output rather than a bundle: bundling would be
 optimising the 7% of startup that is ours.
 
+[↑ Contents](#contents)
+
 ---
 
 ## Your data
@@ -246,6 +313,8 @@ about 1s of grading, realistically one or two cards' scheduling. v1 rewrote the 
 every single grade, which at ~1KB/card meant a 100-card session over a 5,000-card deck did
 around 500MB of writes for 100 logical updates.
 
+[↑ Contents](#contents)
+
 ---
 
 ## Upgrading from 1.x
@@ -269,6 +338,8 @@ something to draw. Older entries beyond that are dropped as before.
 Those versions stored data inside the installed package directory, where a global `npm update`
 would wipe it. The first run copies that file to the proper location automatically and leaves
 the original in place as a safety net.
+
+[↑ Contents](#contents)
 
 ---
 
@@ -316,6 +387,8 @@ classes in this codebase.
 > exports are unchanged. `sm2.reviewCard()` was removed — it mutated its argument in place;
 > use the pure `sm2.schedule()`.
 
+[↑ Contents](#contents)
+
 ---
 
 ## Development
@@ -336,6 +409,7 @@ npm link             # makes `anki` point at your working copy
 | `npm run test:watch`    | Re-run on change                                        |
 | `npm run test:coverage` | With a v8 coverage report                               |
 | `npm run check`         | lint + type-check + format:check + test                 |
+| `npm run demo`          | Rebuild and re-record `docs/demo.gif` (needs VHS)       |
 
 ### Structure
 
@@ -379,7 +453,7 @@ and "no import cycles".
 
 ### Testing
 
-1023 tests, ~96% statement coverage on the non-presentational code.
+1035 tests, ~96% statement coverage on the non-presentational code.
 
 - **Pure functions** — `core/`, `config/` and `ui/charts/` are tested directly.
 - **The store** is driven with no renderer at all: batching, write-through, undo depth.
@@ -409,8 +483,27 @@ and "no import cycles".
 with coverage), `build` (compile, smoke-test the CLI, check the packed contents and the bin's
 executable bit) and `audit`. Ubuntu only; macOS and Windows are not covered.
 
-Releases are documented in [RELEASING.md](RELEASING.md), and what changed in each one is in
-[CHANGELOG.md](CHANGELOG.md).
+Releases are cut by the **Version** workflow: pick patch, minor or major, and it runs the same
+check suite, bumps `package.json`, commits, tags and pushes — then dispatches **Release**, which
+verifies the tag, publishes to npm with provenance, and writes the GitHub release from
+`CHANGELOG.md`. See [RELEASING.md](RELEASING.md) — including the one-time npm trusted-publisher
+setup. What changed in each release is in [CHANGELOG.md](CHANGELOG.md).
+
+### Recording the demo
+
+`docs/demo.gif` is generated, not hand-captured. `npm run demo` builds the CLI, writes a
+deterministic demo collection into `.demo/` with four cards due, and records `docs/demo.tape`
+through [VHS](https://github.com/charmbracelet/vhs):
+
+```bash
+npm run demo
+```
+
+The tape and the seed script are the source of truth — edit those, not the GIF. Both are
+excluded from the published package; the recording needs VHS, ttyd, ffmpeg and a font that has
+the geometric glyphs the menu uses.
+
+[↑ Contents](#contents)
 
 ---
 
