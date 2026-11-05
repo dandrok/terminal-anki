@@ -21,6 +21,12 @@ export interface AchievementsProps {
   onQuit: () => void;
 }
 
+/**
+ * The achievement list, grouped by category.
+ *
+ * Locked entries keep their progress visible, so the screen reads as something
+ * to work towards rather than a wall of grey names.
+ */
 export function Achievements({ onBack, onQuit }: AchievementsProps) {
   const theme = useTheme();
   const { isHelpOpen, toggleHelp } = useHelp();

@@ -18,8 +18,10 @@
   JetBrainsMono Nerd Font — the face most of these terminals run — so those rows were drawn by a
   fallback font at a different size and baseline and never lined up with their neighbours. The
   menu, the screen titles and the achievement icons now use glyphs those fonts actually contain
-  and measure as one cell (`✓`, `◶`, `≡`, `⏻`, `▸`, `[x]`). List hints are also padded by terminal width rather than
-  string length, so a wide label in any future list lines up too.
+  and that `string-width` measures as one cell (`✓`, `◶`, `≡`, `⏻`, `▸`). The tag toggles are
+  plain ASCII `[x]` / `[ ]` for the same reason: three cells by construction, and every font has
+  them. List hints are also padded by terminal width rather than string length, so a wide label
+  in any future list lines up too.
 
 ## 2.1.0
 

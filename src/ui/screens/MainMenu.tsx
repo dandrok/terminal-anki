@@ -23,7 +23,7 @@ import type { Screen } from './Screen.js';
  *
  * Check both before adding one:
  *   fc-query -f '%{charset}' <font>      # is it in the font?
- *   node -e "console.log(require('string-width')('X'))"
+ *   node --input-type=module -e "import sw from 'string-width'; console.log(sw('X'))"
  */
 const ITEMS: SelectItem<Screen>[] = [
   { value: 'study', label: '◆ Study due cards' },
@@ -43,6 +43,10 @@ export interface MainMenuProps {
   onQuit: () => void;
 }
 
+/**
+ * The root screen: every destination in one list, with today's counts in the
+ * header and the session worth starting at the top.
+ */
 export function MainMenu({ onSelect, onQuit }: MainMenuProps) {
   const [index, setIndex] = useState(0);
   const { isHelpOpen, toggleHelp } = useHelp();

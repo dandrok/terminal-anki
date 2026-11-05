@@ -484,7 +484,8 @@ with coverage), `build` (compile, smoke-test the CLI, check the packed contents 
 executable bit) and `audit`. Ubuntu only; macOS and Windows are not covered.
 
 Releases are cut by the **Version** workflow: pick patch, minor or major, and it runs the same
-check suite, bumps `package.json`, commits, tags and pushes — then dispatches **Release**, which
+`npm run check` suite, bumps `package.json`, commits, tags and pushes — then dispatches
+**Release**, which
 verifies the tag, publishes to npm with provenance, and writes the GitHub release from
 `CHANGELOG.md`. See [RELEASING.md](RELEASING.md) — including the one-time npm trusted-publisher
 setup. What changed in each release is in [CHANGELOG.md](CHANGELOG.md).

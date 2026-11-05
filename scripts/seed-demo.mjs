@@ -22,6 +22,7 @@ function at(offset, hour = 9) {
   return date.toISOString();
 }
 
+/** An ISO timestamp `hours` in the past, for the cards that are due now. */
 function hoursAgo(hours) {
   return new Date(NOW.getTime() - hours * 3_600_000).toISOString();
 }
@@ -157,6 +158,8 @@ const cards = SEEDS.map(([front, back, tag, interval], index) => {
 
 // A small deterministic PRNG, so every recording has the same heatmap.
 let state = 20_260_305;
+
+/** A fixed-seed PRNG, so every recording has the same heatmap. */
 function random() {
   state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
   return state / 2_147_483_648;
@@ -213,7 +216,10 @@ const config = {
   dailyGoal: 20,
   heatmapWeeks: 15,
   defaultSessionLength: null,
-  shuffle: true,
+  // The app default is `true`. The recording pins listed order because
+  // `StudyFlow` shuffles with `Math.random`, which would reorder the study
+  // cards — and change the GIF — on every re-record.
+  shuffle: false,
   images: 'auto'
 };
 

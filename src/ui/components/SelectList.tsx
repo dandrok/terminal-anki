@@ -86,6 +86,7 @@ export function SelectList<T>({
   // `string-width` too, so a wide glyph (CJK, an emoji) would otherwise leave
   // the hint one column short of the others. `padEnd` counts code units.
   const labelWidth = Math.max(0, ...items.map(item => stringWidth(item.label)));
+  /** Pad `label` with spaces out to the shared hint column. */
   const pad = (label: string): string =>
     label + ' '.repeat(Math.max(0, labelWidth - stringWidth(label)));
 

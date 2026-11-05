@@ -37,6 +37,7 @@ export function extractReleaseNotes(markdown: string, version: string): string {
   return body;
 }
 
+/** True when this file was run as a script, false when a test imported it. */
 function isMain(): boolean {
   const entry = process.argv[1];
   return entry !== undefined && fileURLToPath(import.meta.url) === entry;

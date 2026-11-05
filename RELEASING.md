@@ -39,7 +39,10 @@ required reviewer. That is what stops a tag from publishing without a human look
 2. **Run the Version workflow.** Actions → **Version** → _Run workflow_ → pick `patch`, `minor`
    or `major`. It:
 
-   - runs `npm run check` — the same gate as a pull request;
+   - runs `npm run check` — lint, type-check, format:check and the test suite. That is the
+     pull-request `verify` job minus the v8 coverage run, and it does **not** include the
+     `audit` job (`npm audit --omit=dev --audit-level=high`), so a release is not gated on a
+     production dependency audit;
    - computes the next version with `scripts/next-version.ts`;
    - checks `CHANGELOG.md` has the matching section (`scripts/release-notes.ts`);
    - commits `release: X.Y.Z`, tags `vX.Y.Z`, and pushes both.
