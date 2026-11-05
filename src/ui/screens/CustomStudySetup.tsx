@@ -85,6 +85,7 @@ export function CustomStudySetup({
   };
 
   const cycle = (delta: number): void => {
+    /** Step `value` by `delta`, wrapping into `[0, length)`. */
     const wrap = (value: number, length: number) => (value + delta + length) % length;
     switch (FIELDS[cursor.current.fieldIndex]) {
       case 'scope':
@@ -146,6 +147,7 @@ export function CustomStudySetup({
     }
   });
 
+  /** One label/value row of the filter form, with the cursor when it is active. */
   const row = (name: Field, label: string, value: string) => {
     const isActive = name === field;
     return (
@@ -166,7 +168,7 @@ export function CustomStudySetup({
   const tagLabel =
     allTags.length === 0
       ? 'no tags yet'
-      : `${selectedTags.includes(allTags[tagIndex] ?? '') ? '☑' : '☐'} ${allTags[tagIndex]}` +
+      : `${selectedTags.includes(allTags[tagIndex] ?? '') ? '[x]' : '[ ]'} ${allTags[tagIndex]}` +
         (selectedTags.length > 0 ? `  (${selectedTags.length} selected)` : '');
 
   return (

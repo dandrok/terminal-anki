@@ -70,6 +70,9 @@ dist/
 # TypeScript cache
 *.tsbuildinfo
 
+# Generated demo collection for the README recording
+.demo/
+
 # Your project-specific data
 flashcards.json
 *.db

@@ -1,4 +1,5 @@
 import { Box, Text, useInput } from 'ink';
+import stringWidth from 'string-width';
 import { useTheme } from '../hooks/useTheme.js';
 import { isArrowDown, isArrowUp, isConfirm, splitKeystrokes } from '../keystrokes.js';
 
@@ -80,7 +81,14 @@ export function SelectList<T>({
   // Hints line up in their own column rather than trailing each label by a
   // single space, where "Browse cards view · edit · delete" read as one run of
   // text and it was not obvious which half was the entry.
-  const labelWidth = Math.max(0, ...items.map(item => item.label.length));
+  //
+  // Measured in terminal cells, not string length: Ink lays the row out with
+  // `string-width` too, so a wide glyph (CJK, an emoji) would otherwise leave
+  // the hint one column short of the others. `padEnd` counts code units.
+  const labelWidth = Math.max(0, ...items.map(item => stringWidth(item.label)));
+  /** Pad `label` with spaces out to the shared hint column. */
+  const pad = (label: string): string =>
+    label + ' '.repeat(Math.max(0, labelWidth - stringWidth(label)));
 
   return (
     <Box flexDirection="column">
@@ -90,7 +98,7 @@ export function SelectList<T>({
           <Box key={item.label}>
             <Text color={isSelected ? theme.primary : theme.muted}>{isSelected ? '❯ ' : '  '}</Text>
             <Text color={isSelected ? theme.primary : theme.text} bold={isSelected}>
-              {item.hint ? item.label.padEnd(labelWidth) : item.label}
+              {item.hint ? pad(item.label) : item.label}
             </Text>
             {item.hint ? <Text color={theme.muted}>{`   ${item.hint}`}</Text> : null}
           </Box>

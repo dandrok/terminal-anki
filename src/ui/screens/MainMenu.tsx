@@ -8,17 +8,34 @@ import { useAppState } from '../hooks/useStore.js';
 import { selectExtendedStats } from '../../state/selectors.js';
 import type { Screen } from './Screen.js';
 
+/**
+ * Icons come from glyphs the common terminal fonts actually contain —
+ * JetBrainsMono Nerd Font, CaskaydiaMono NF and friends — and follow two rules.
+ *
+ * One: the font has to contain it. A glyph it is missing is not a missing cell
+ * but a borrowed one, drawn by a fallback face at another size and baseline, so
+ * the row stops lining up with its neighbours (`⚙`, `◑`, `◰`, `◐`, `❖` are all
+ * absent from JetBrainsMono NF).
+ *
+ * Two: `string-width` has to measure it as one cell, because Ink lays the row
+ * out with that number. `☰` is East Asian Wide and measures two, which pushed
+ * the hint beside it a column left of every other hint.
+ *
+ * Check both before adding one:
+ *   fc-query -f '%{charset}' <font>      # is it in the font?
+ *   node --input-type=module -e "import sw from 'string-width'; console.log(sw('X'))"
+ */
 const ITEMS: SelectItem<Screen>[] = [
   { value: 'study', label: '◆ Study due cards' },
   { value: 'custom-study', label: '◎ Custom study session' },
   { value: 'add', label: '+ Add new card' },
   { value: 'browse', label: '□ Browse cards', hint: 'view · edit · delete' },
   { value: 'search', label: '◉ Search cards' },
-  { value: 'achievements', label: '◑ Achievements' },
-  { value: 'analytics', label: '◰ Analytics & history' },
+  { value: 'achievements', label: '✓ Achievements' },
+  { value: 'analytics', label: '◶ Analytics & history' },
   { value: 'stats', label: '◈ Quick stats' },
-  { value: 'settings', label: '⚙ Settings', hint: 'theme · goals · defaults' },
-  { value: 'exit', label: '◐ Exit' }
+  { value: 'settings', label: '≡ Settings', hint: 'theme · goals · defaults' },
+  { value: 'exit', label: '⏻ Exit' }
 ];
 
 export interface MainMenuProps {
@@ -26,6 +43,10 @@ export interface MainMenuProps {
   onQuit: () => void;
 }
 
+/**
+ * The root screen: every destination in one list, with today's counts in the
+ * header and the session worth starting at the top.
+ */
 export function MainMenu({ onSelect, onQuit }: MainMenuProps) {
   const [index, setIndex] = useState(0);
   const { isHelpOpen, toggleHelp } = useHelp();
@@ -41,7 +62,7 @@ export function MainMenu({ onSelect, onQuit }: MainMenuProps) {
 
   return (
     <Layout
-      title="※ Terminal Anki"
+      title="❯ Terminal Anki"
       status={status}
       controls={MENU_CONTROLS}
       isHelpOpen={isHelpOpen}

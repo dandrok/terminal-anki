@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `docs/demo.gif`, recorded with [VHS](https://github.com/charmbracelet/vhs) from a generated
+  demo collection, so the README opens with the application rather than a description of it.
+  `npm run demo` rebuilds it from `docs/demo.tape` and `scripts/seed-demo.mjs`; both are the
+  source of truth.
+- The **Version** workflow bumps `package.json`, tags and pushes from the Actions tab, after
+  running the full check suite and refusing to tag a version that has no `CHANGELOG.md`
+  section. **Release** now writes the GitHub release from that section.
+
+### Fixed
+
+- The menu icon column mixed two fonts. `⚙`, `◑`, `◰`, `◐` and `❖` are absent from
+  JetBrainsMono Nerd Font — the face most of these terminals run — so those rows were drawn by a
+  fallback font at a different size and baseline and never lined up with their neighbours. The
+  menu, the screen titles and the achievement icons now use glyphs those fonts actually contain
+  and that `string-width` measures as one cell (`✓`, `◶`, `≡`, `⏻`, `▸`). The tag toggles are
+  plain ASCII `[x]` / `[ ]` for the same reason: three cells by construction, and every font has
+  them. List hints are also padded by terminal width rather than string length, so a wide label
+  in any future list lines up too.
+
 ## 2.1.0
 
 ### Images on cards

@@ -1,0 +1,99 @@
+name: Version
+
+# The release bot. Bumps package.json, commits, tags, and pushes — which is what
+# starts `Release`, the workflow that verifies, publishes to npm and writes the
+# GitHub release. Nothing is published from here, and the tag it pushes is the
+# only signal the publish path listens for.
+#
+# A version may only be cut when CHANGELOG.md already has a `## <version>`
+# section: the notes are written by hand, and the release body is extracted from
+# them. `scripts/next-version.ts` computes the number and `release-notes.ts`
+# checks the heading exists.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Which part of the version to bump'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      dry-run:
+        description: 'Compute the version and verify the notes, but do not tag'
+        type: boolean
+        default: false
+
+concurrency:
+  group: version
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # Pushes made with the workflow's own GITHUB_TOKEN do not trigger other
+  # workflows, so the tag would never start `Release`. Dispatching it needs
+  # actions: write.
+  actions: write
+
+jobs:
+  bump:
+    name: Bump, tag and push
+    # A manual dispatch can select any branch. Only main may be released.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          # The full history is what `npm version` tags against.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The same gate a pull request goes through. Tagging is what publishes,
+      # so it should not be the first time the suite runs on this commit.
+      - name: Run the full check suite
+        run: npm run check
+
+      - name: Work out the next version
+        id: next
+        run: |
+          version="$(node scripts/next-version.ts '${{ inputs.bump }}')"
+          # Fails the job when CHANGELOG.md has no section for this version.
+          node scripts/release-notes.ts "$version" > /dev/null
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "::notice::Next version is $version"
+
+      - name: Stop before tagging
+        if: inputs.dry-run
+        run: echo "::notice::Dry run — ${{ steps.next.outputs.version }} was not tagged."
+
+      # `npm version` writes package.json, commits and creates the tag. The
+      # push is done separately so `--follow-tags` sends the tag too; this
+      # repository never force-pushes main.
+      #
+      # The commit is authored as the repository owner, not as a bot: the
+      # commit history is one person's, and a release commit is not the place
+      # to introduce a second name.
+      - name: Commit and tag
+        if: ${{ !inputs.dry-run }}
+        run: |
+          git config user.name 'dandrok'
+          git config user.email '46764643+dandrok@users.noreply.github.com'
+          npm version '${{ steps.next.outputs.version }}' -m 'release: %s'
+          git push origin HEAD:main --follow-tags
+
+      # A tag pushed with GITHUB_TOKEN does not emit an event GitHub acts on,
+      # so `Release` would sit idle. Dispatch it at the tag explicitly; the
+      # publish job checks the ref, so this also proves the tag exists.
+      - name: Start the release workflow
+        if: ${{ !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref "v${{ steps.next.outputs.version }}" -f dry-run=false

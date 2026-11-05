@@ -53,6 +53,13 @@ jobs:
           fi
           echo "Tag and package version agree: $pkg"
 
+      # The release body is the changelog section, so a tag with no section must
+      # not publish. The Version workflow checks this before it tags; a tag
+      # pushed by hand bypasses that, and this is where it gets caught.
+      - name: Confirm the changelog has notes for this version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/release-notes.ts "${GITHUB_REF_NAME#v}" > /dev/null
+
   publish:
     name: Publish to npm
     needs: verify
@@ -111,3 +118,42 @@ jobs:
       # Provenance is attested automatically under trusted publishing.
       - name: Publish
         run: npm publish --access public
+
+  announce:
+    name: Create the GitHub release
+    # Only after npm has the package: a release page pointing at a version
+    # nobody can install is worse than no page yet.
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      # Creating a release writes to the repository.
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      # The notes are hand-written in CHANGELOG.md, and `verify` has already
+      # refused the tag if that section is missing. Extraction failing here is
+      # a real error, not a reason to invent notes from pull-request titles.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "::notice::Release $tag already exists"
+            exit 0
+          fi
+
+          notes="$(mktemp)"
+          node scripts/release-notes.ts "$version" > "$notes"
+          gh release create "$tag" --verify-tag --title "v$version" --notes-file "$notes"

@@ -226,7 +226,7 @@ function SettingsBody({ field, values, isDirty, isHelpOpen, themeId }: SettingsB
 
   return (
     <Layout
-      title="⚙ Settings"
+      title="≡ Settings"
       status={isDirty ? 'unsaved — ⏎ to save, q to discard' : 'saved'}
       controls={SETTINGS_CONTROLS}
       isHelpOpen={isHelpOpen}

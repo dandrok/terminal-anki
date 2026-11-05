@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import stringWidth from 'string-width';
 import { SelectList, type SelectItem } from '../../src/ui/components/SelectList.js';
 import { ARROW_DOWN, ARROW_UP, ENTER, withRender } from './render.js';
 
@@ -105,6 +106,26 @@ describe('SelectList', () => {
       expect(onMove).toHaveBeenCalledWith(1);
       expect(onSelect).toHaveBeenCalledWith('b');
     });
+  });
+
+  it('pads hints by terminal width, not string length', async () => {
+    // `padEnd` counts code units, so a wide label left the hint short of the
+    // column. Ink lays the row out with `string-width`, which is the measure
+    // the padding has to use too.
+    const items: SelectItem<string>[] = [
+      { value: 'a', label: 'Alpha', hint: 'first' },
+      { value: 'b', label: '世界', hint: 'second' }
+    ];
+    await withRender(
+      <SelectList items={items} selectedIndex={0} onMove={vi.fn()} onSelect={vi.fn()} />,
+      ({ frame }) => {
+        const [first, second] = frame().split('\n');
+        // Columns, not code units: "世界" is two code units and four cells.
+        const column = (line: string, hint: string) =>
+          stringWidth(line.slice(0, line.indexOf(hint)));
+        expect(column(first, 'first')).toBe(column(second, 'second'));
+      }
+    );
   });
 
   it('ignores input while inactive', async () => {
