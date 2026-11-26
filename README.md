@@ -9,6 +9,12 @@ Flashcards with spaced repetition, in your terminal. Two keystrokes per card.
 
 ![Terminal Anki: the menu, a four-card study session, the activity grid and the settings preview](https://raw.githubusercontent.com/dandrok/terminal-anki/main/docs/demo.gif)
 
+Install or test with `npx`
+
+```bash
+npx terminal-anki
+```
+
 ```bash
 npm install -g terminal-anki
 anki
